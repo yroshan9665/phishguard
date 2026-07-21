@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+{% block title %}Sign In — PhishGuard AI{% endblock %}
+{% block container_class %}{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Full-screen layout ── */
+  .login-outer {
+    position: fixed; inset: 0; display: flex;
+    background: #07071a;
+    overflow: hidden;
+  }
+
+  /* ── Canvas bg ── */
+  #bgCanvas { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+
+  /* ── Grid overlay ── */
+  .login-outer::after {
+    content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(124,111,255,.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,111,255,.055) 1px, transparent 1px);
+    background-size: 52px 52px;
+  }
+
+  /* ── LEFT panel ── */
+  .lp-left {
+    flex: 1; position: relative; z-index: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 3rem 2rem;
+  }
+
+  /* shield container */
+  .shield-scene {
+    position: relative; width: 220px; height: 220px;
+    margin: 0 auto 2.4rem; flex-shrink: 0;
+  }
+  /* glow blob */
+  .shield-scene::before {
+    content: ''; position: absolute;
+    inset: -40px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,111,255,.35) 0%, rgba(6,182,212,.15) 50%, transparent 70%);
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+  /* outer dashed ring */
+  .s-ring {
+    position: absolute; border-radius: 50%;
+    border: 1.5px dashed rgba(124,111,255,.45);
+    animation: ringCW 12s linear infinite;
+  }
+  .s-ring::after {
+    content: ''; position: absolute; top: -5px; left: 50%;
+    transform: translateX(-50%);
+    width: 9px; height: 9px; border-radius: 50%;
+    background: #7c6fff;
+    box-shadow: 0 0 12px 3px rgba(124,111,255,.9);
+  }
+  .sr1 { inset: -14px; }
+  .sr2 {
+    inset: -34px;
+    border-color: rgba(6,182,212,.35);
+    animation: ringCCW 18s linear infinite;
+  }
+  .sr2::after {
+    background: #06b6d4;
+    box-shadow: 0 0 12px 3px rgba(6,182,212,.9);
+    top: auto; bottom: -5px;
+  }
+
+  /* shield SVG wrapper */
+  .shield-svg-wrap {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2;
+  }
+
+  /* text block */
+  .lp-title {
+    font-size: 2.2rem; font-weight: 900; color: #fff;
+    line-height: 1.2; text-align: center; margin-bottom: .8rem;
+  }
+  .lp-title span {
+    background: linear-gradient(90deg, #a855f7, #06b6d4);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .lp-sub {
+    font-size: .9rem; color: rgba(255,255,255,.42);
+    line-height: 1.7; text-align: center;
+    max-width: 300px; margin: 0 auto 1.8rem;
+  }
+  .feat-pills { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; }
+  .fpill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: .78rem; font-weight: 600;
+    padding: .38em 1em; border-radius: 50px;
+    border: 1px solid; backdrop-filter: blur(8px);
+  }
+
+  /* ── RIGHT card panel ── */
+  .lp-right {
+    width: 420px; flex-shrink: 0; position: relative; z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem 1.5rem;
+  }
+
+  .login-card {
+    width: 100%; max-width: 360px;
+    background: rgba(10,9,30,.92);
+    border: 1px solid rgba(124,111,255,.22);
+    border-radius: 24px;
+    padding: 0 0 1.6rem;
+    box-shadow: 0 32px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(124,111,255,.06) inset;
+    backdrop-filter: blur(28px);
+    overflow: hidden;
+  }
+
+  /* top accent line */
+  .card-line {
+    height: 3px;
+    background: linear-gradient(90deg, #7c6fff, #a855f7, #06b6d4);
+    margin-bottom: 2rem;
+  }
+
+  .card-body-inner { padding: 0 2rem; }
+
+  /* logo icon */
+  .card-logo {
+    width: 64px; height: 64px; border-radius: 20px;
+    background: linear-gradient(135deg, #7c6fff, #a855f7 55%, #06b6d4);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.1rem;
+    box-shadow: 0 8px 32px rgba(124,111,255,.5);
+    animation: logoPulse 2.8s ease-in-out infinite;
+  }
+
+  .card-title {
+    font-size: 1.55rem; font-weight: 800; color: #fff;
+    text-align: center; margin-bottom: 4px;
+  }
+  .card-sub {
+    font-size: .85rem; color: rgba(255,255,255,.38);
+    text-align: center; margin-bottom: 1.6rem;
+  }
+  .card-sub span {
+    background: linear-gradient(90deg, #a78bfa, #06b6d4);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    font-weight: 700;
+  }
+
+  /* field labels */
+  .f-label {
+    font-size: .78rem; color: rgba(255,255,255,.55);
+    margin-bottom: .4rem; display: block;
+  }
+
+  /* input rows */
+  .f-wrap {
+    display: flex; align-items: center;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 12px; height: 48px;
+    transition: border-color .2s, box-shadow .2s;
+    overflow: hidden; margin-bottom: 1rem;
+  }
+  .f-wrap:focus-within {
+    border-color: rgba(124,111,255,.65);
+    box-shadow: 0 0 0 3px rgba(124,111,255,.13);
+    background: rgba(124,111,255,.05);
+  }
+  .f-icon {
+    width: 44px; display: flex; align-items: center; justify-content: center;
+    color: rgba(124,111,255,.7); font-size: .88rem; flex-shrink: 0;
+  }
+  .f-wrap input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: #e0e0e0; font-size: .9rem; height: 100%; padding: 0 10px;
+  }
+  .f-wrap input::placeholder { color: rgba(107,107,138,.45); }
+  .eye-tog {
+    width: 44px; height: 100%; background: none; border: none;
+    cursor: pointer; color: rgba(124,111,255,.55); font-size: .95rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: color .2s; flex-shrink: 0;
+  }
+  .eye-tog:hover { color: #a855f7; }
+
+  /* remember / forgot row */
+  .row-rf {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.2rem;
+  }
+  .form-check-input { background-color: rgba(255,255,255,.07); border-color: rgba(255,255,255,.2); }
+  .form-check-input:checked { background-color: #7c6fff; border-color: #7c6fff; }
+  .form-check-label { font-size: .8rem; color: rgba(255,255,255,.42); }
+  .forgot-lnk {
+    font-size: .8rem; color: rgba(255,255,255,.35);
+    text-decoration: none; display: flex; align-items: center; gap: 4px;
+    transition: color .2s;
+  }
+  .forgot-lnk:hover { color: #a78bfa; }
+
+  /* sign-in button */
+  .signin-btn {
+    height: 50px; width: 100%; border-radius: 13px;
+    font-size: 1rem; font-weight: 700; letter-spacing: .2px;
+    background: linear-gradient(135deg, #7c6fff 0%, #a855f7 60%, #06b6d4 100%);
+    border: none; color: #fff; cursor: pointer;
+    box-shadow: 0 6px 28px rgba(124,111,255,.5);
+    transition: transform .22s, box-shadow .22s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-bottom: 1.4rem;
+  }
+  .signin-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 36px rgba(124,111,255,.65);
+  }
+
+  /* footer */
+  .card-footer-row {
+    text-align: center; font-size: .83rem; color: rgba(255,255,255,.35);
+    margin-bottom: .9rem;
+  }
+  .card-footer-row a {
+    color: #a78bfa; font-weight: 700; text-decoration: none; margin-left: 4px;
+  }
+  .sec-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .sec-item {
+    font-size: .65rem; color: rgba(255,255,255,.25);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .sec-item i { color: rgba(124,111,255,.4); }
+
+  /* keyframes */
+  @keyframes glowPulse { 0%,100%{opacity:.7;transform:scale(1);} 50%{opacity:1;transform:scale(1.08);} }
+  @keyframes ringCW   { to { transform: rotate(360deg); } }
+  @keyframes ringCCW  { to { transform: rotate(-360deg); } }
+  @keyframes logoPulse { 0%,100%{box-shadow:0 8px 32px rgba(124,111,255,.5);} 50%{box-shadow:0 8px 48px rgba(124,111,255,.85);} }
+  @keyframes barShimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+
+  @media(max-width:860px) { .lp-left { display: none; } .lp-right { width: 100%; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-outer">
+  <canvas id="bgCanvas"></canvas>
+
+  <!-- ══ LEFT: Shield panel ══ -->
+  <div class="lp-left">
+    <div class="shield-scene">
+      <div class="s-ring sr1"></div>
+      <div class="s-ring sr2"></div>
+      <div class="shield-svg-wrap">
+        <svg viewBox="0 0 120 120" width="160" height="160" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#7c6fff"/>
+              <stop offset="55%" stop-color="#a855f7"/>
+              <stop offset="100%" stop-color="#06b6d4"/>
+            </linearGradient>
+            <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <!-- outer shield fill -->
+          <path d="M60 6 L12 26 L12 62 C12 86 34 106 60 114 C86 106 108 86 108 62 L108 26 Z"
+                fill="url(#sg)" opacity=".15"/>
+          <!-- outer shield stroke -->
+          <path d="M60 6 L12 26 L12 62 C12 86 34 106 60 114 C86 106 108 86 108 62 L108 26 Z"
+                fill="none" stroke="url(#sg)" stroke-width="2.5" filter="url(#glow)"/>
+          <!-- inner shield -->
+          <path d="M60 22 L26 36 L26 62 C26 78 40 94 60 100 C80 94 94 78 94 62 L94 36 Z"
+                fill="url(#sg)" opacity=".08"/>
+          <!-- checkmark -->
+          <polyline points="40,60 53,74 80,46"
+                    fill="none" stroke="url(#sg)" stroke-width="6"
+                    stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+          <!-- center dot -->
+          <circle cx="60" cy="60" r="4" fill="#fff" opacity=".9"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="lp-title">Protect Yourself<br/>from <span>Phishing Attacks</span></div>
+    <p class="lp-sub">AI-powered analysis of 15+ URL signals to keep you safe online. Instant results, zero compromise.</p>
+
+    <div class="feat-pills">
+      <span class="fpill" style="color:#10b981;border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.08);"><i class="bi bi-shield-fill-check"></i>SSL Verified</span>
+      <span class="fpill" style="color:#a855f7;border-color:rgba(168,85,247,.35);background:rgba(168,85,247,.08);"><i class="bi bi-cpu-fill"></i>AI Powered</span>
+      <span class="fpill" style="color:#06b6d4;border-color:rgba(6,182,212,.35);background:rgba(6,182,212,.08);"><i class="bi bi-lightning-fill"></i>Instant Scan</span>
+      <span class="fpill" style="color:#f59e0b;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.08);"><i class="bi bi-graph-up-arrow"></i>15+ Signals</span>
+      <span class="fpill" style="color:#ef4444;border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.08);"><i class="bi bi-file-earmark-pdf-fill"></i>PDF Report</span>
+    </div>
+  </div>
+
+  <!-- ══ RIGHT: Login card ══ -->
+  <div class="lp-right">
+    <div class="login-card">
+      <div class="card-line"></div>
+      <div class="card-body-inner">
+
+        <!-- Logo -->
+        <div class="card-logo">
+          <svg viewBox="0 0 24 24" width="30" height="30" fill="white">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5L12 1zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93C9.33 17.79 7 14.5 7 11V7.18L12 5z"/>
+            <circle cx="12" cy="12" r="2.2" fill="rgba(255,255,255,.88)"/>
+          </svg>
+        </div>
+
+        <div class="card-title">Welcome back</div>
+        <div class="card-sub">Sign in to <span>PhishGuard AI</span></div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for cat, msg in messages %}
+            <div class="alert alert-{{ cat }} d-flex align-items-center gap-2 py-2 mb-3" style="font-size:.8rem;border-radius:10px;">
+              <i class="bi {% if cat=='danger' %}bi-x-circle-fill{% elif cat=='success' %}bi-check-circle-fill{% else %}bi-info-circle-fill{% endif %}"></i>{{ msg }}
+            </div>
+          {% endfor %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+          <label class="f-label">Email address</label>
+          <div class="f-wrap">
+            <span class="f-icon"><i class="bi bi-envelope-fill"></i></span>
+            <input type="email" name="email" placeholder="you@example.com" autocomplete="email" required/>
+          </div>
+
+          <label class="f-label">Password</label>
+          <div class="f-wrap">
+            <span class="f-icon"><i class="bi bi-lock-fill"></i></span>
+            <input type="password" name="password" id="loginPwd" placeholder="Enter your password" autocomplete="current-password" required/>
+            <button type="button" class="eye-tog" onclick="toggleLoginEye()">
+              <i class="bi bi-eye" id="eyeIcon"></i>
+            </button>
+          </div>
+
+          <div class="row-rf">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" name="remember" id="remember"/>
+              <label class="form-check-label" for="remember">Remember me</label>
+            </div>
+            <a href="{{ url_for('auth.forgot_password') }}" class="forgot-lnk">
+              <i class="bi bi-question-circle"></i>Forgot password?
+            </a>
+          </div>
+
+          <button type="submit" class="signin-btn">
+            <i class="bi bi-box-arrow-in-right"></i>Sign In
+          </button>
+        </form>
+
+        <div class="card-footer-row">
+          Don't have an account?
+          <a href="{{ url_for('auth.register') }}">Create one <i class="bi bi-arrow-right" style="font-size:.72rem;"></i></a>
+        </div>
+
+        <div class="sec-row">
+          <span class="sec-item"><i class="bi bi-shield-lock-fill"></i>256-bit encrypted</span>
+          <span class="sec-item"><i class="bi bi-patch-check-fill"></i>CSRF protected</span>
+          <span class="sec-item"><i class="bi bi-key-fill"></i>Bcrypt hashed</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleLoginEye() {
+  const el = document.getElementById('loginPwd');
+  const ic = document.getElementById('eyeIcon');
+  el.type = el.type === 'password' ? 'text' : 'password';
+  ic.className = el.type === 'text' ? 'bi bi-eye-slash' : 'bi bi-eye';
+}
+
+/* Particle canvas */
+(function () {
+  const canvas = document.getElementById('bgCanvas');
+  const ctx = canvas.getContext('2d');
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  resize(); window.addEventListener('resize', resize);
+  const C = ['rgba(124,111,255,','rgba(168,85,247,','rgba(6,182,212,','rgba(255,255,255,'];
+  const pts = Array.from({ length: 75 }, () => ({
+    x: Math.random() * innerWidth, y: Math.random() * innerHeight,
+    r: Math.random() * 1.8 + .7,
+    col: C[Math.floor(Math.random() * C.length)],
+    a: Math.random() * .35 + .07,
+    dx: (Math.random() - .5) * .32, dy: (Math.random() - .5) * .32,
+    p: Math.random() * Math.PI * 2, ps: Math.random() * .016 + .007,
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pts.forEach(p => {
+      p.p += p.ps;
+      const a = p.a * (.5 + .5 * Math.sin(p.p));
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.col + a + ')'; ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = p.col + (a * .09) + ')'; ctx.fill();
+      p.x += p.dx; p.y += p.dy;
+      if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
+      if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
+    });
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+      const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < 115) {
+        ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y);
+        ctx.strokeStyle = 'rgba(124,111,255,' + (.065 * (1 - d / 115)) + ')';
+        ctx.lineWidth = .5; ctx.stroke();
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+{% endblock %}

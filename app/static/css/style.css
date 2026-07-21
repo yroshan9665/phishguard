@@ -1,0 +1,61 @@
+/* ══════════════════════════════════════
+   PhishGuard AI — Global Stylesheet
+══════════════════════════════════════ */
+
+/* Page fade-in */
+.page-body { animation: pgFade 0.35s ease both; }
+@keyframes pgFade {
+  from { opacity:0; transform:translateY(8px); }
+  to   { opacity:1; transform:none; }
+}
+
+/* Card hover */
+.card:hover { border-color: rgba(124,111,255,0.18); }
+
+/* Table row */
+.table-hover tbody tr { transition: background 0.14s; }
+.table-responsive { border-radius: 0 0 16px 16px; }
+
+/* Btn */
+.btn { transition: all 0.2s ease; }
+.btn:active { transform: scale(0.98) !important; }
+
+/* Form check */
+.form-check-input:checked     { background-color:#7c6fff; border-color:#7c6fff; }
+.form-check-input:focus       { box-shadow:0 0 0 3px rgba(124,111,255,0.18); border-color:#7c6fff; }
+.form-check-input             { background-color:transparent; border:1px solid rgba(255,255,255,0.14); }
+
+/* Progress */
+.progress-bar { transition: width 0.55s ease; }
+
+/* Custom select */
+.form-select {
+  background-color: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.09);
+  color: #f0f0ff;
+  border-radius: 10px;
+}
+.form-select:focus {
+  background-color: rgba(124,111,255,0.05);
+  border-color: #7c6fff;
+  box-shadow: 0 0 0 3px rgba(124,111,255,0.14);
+  color: #f0f0ff;
+}
+
+/* Dropdown divider */
+.dropdown-divider { border-color: rgba(255,255,255,0.07) !important; }
+
+/* Alert close */
+.btn-close { filter: invert(1) grayscale(1); opacity:0.45; }
+.btn-close:hover { opacity:0.9; }
+
+/* Spinner */
+.spinner-border { vertical-align: middle; }
+
+/* Responsive auth card */
+@media (max-width:480px){
+  .auth-card { padding:1.75rem 1.2rem !important; border-radius:18px !important; }
+}
+
+/* Navbar toggler focus */
+.navbar-toggler:focus { box-shadow:none; }

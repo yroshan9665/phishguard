@@ -1,0 +1,502 @@
+{% extends "base.html" %}
+{% block title %}Create Account — PhishGuard AI{% endblock %}
+{% block container_class %}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .reg-outer {
+    position: fixed; inset: 0; display: flex;
+    background: #07071a; overflow: hidden;
+  }
+  #regCanvas { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+  .reg-outer::after {
+    content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(124,111,255,.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,111,255,.055) 1px, transparent 1px);
+    background-size: 52px 52px;
+  }
+
+  /* ── LEFT panel ── */
+  .reg-left {
+    flex: 1; position: relative; z-index: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 3rem 2rem;
+  }
+  .shield-scene {
+    position: relative; width: 200px; height: 200px;
+    margin: 0 auto 2.2rem; flex-shrink: 0;
+  }
+  .shield-scene::before {
+    content: ''; position: absolute; inset: -40px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,111,255,.32) 0%, rgba(6,182,212,.12) 50%, transparent 70%);
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+  .s-ring { position: absolute; border-radius: 50%; border: 1.5px dashed rgba(124,111,255,.45); animation: ringCW 12s linear infinite; }
+  .s-ring::after {
+    content: ''; position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
+    width: 9px; height: 9px; border-radius: 50%; background: #7c6fff;
+    box-shadow: 0 0 12px 3px rgba(124,111,255,.9);
+  }
+  .sr1 { inset: -14px; }
+  .sr2 { inset: -34px; border-color: rgba(6,182,212,.35); animation: ringCCW 18s linear infinite; }
+  .sr2::after { background: #06b6d4; box-shadow: 0 0 12px 3px rgba(6,182,212,.9); top: auto; bottom: -5px; }
+  .shield-svg-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 2; }
+
+  .lp-title { font-size: 2rem; font-weight: 900; color: #fff; line-height: 1.2; text-align: center; margin-bottom: .8rem; }
+  .lp-title span { background: linear-gradient(90deg,#a855f7,#06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .lp-sub { font-size: .88rem; color: rgba(255,255,255,.4); line-height: 1.7; text-align: center; max-width: 290px; margin: 0 auto 1.6rem; }
+  .feat-pills { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; }
+  .fpill { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; font-weight: 600; padding: .38em 1em; border-radius: 50px; border: 1px solid; backdrop-filter: blur(8px); }
+
+  /* ── RIGHT panel ── */
+  .reg-right {
+    width: 460px; flex-shrink: 0; position: relative; z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    padding: 1.5rem; overflow-y: auto;
+  }
+
+  .reg-card {
+    width: 100%; max-width: 390px;
+    background: rgba(10,9,30,.92);
+    border: 1px solid rgba(124,111,255,.22);
+    border-radius: 24px;
+    padding: 0 0 1.6rem;
+    box-shadow: 0 32px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(124,111,255,.06) inset;
+    backdrop-filter: blur(28px);
+    overflow: hidden;
+  }
+  .card-line { height: 3px; background: linear-gradient(90deg,#7c6fff,#a855f7,#06b6d4,#7c6fff); background-size: 200% 100%; animation: barShimmer 3s linear infinite; margin-bottom: 1.8rem; }
+  .card-body-inner { padding: 0 1.8rem; }
+
+  .auth-logo { width: 56px; height: 56px; border-radius: 18px; background: linear-gradient(135deg,#7c6fff,#a855f7 55%,#06b6d4); display: flex; align-items: center; justify-content: center; margin: 0 auto .85rem; box-shadow: 0 8px 28px rgba(124,111,255,.5); animation: logoPulse 2.8s ease-in-out infinite; }
+  .card-title { font-size: 1.45rem; font-weight: 800; color: #fff; text-align: center; margin-bottom: 3px; }
+  .card-sub { font-size: .82rem; color: rgba(255,255,255,.38); text-align: center; margin-bottom: 1.4rem; }
+  .card-sub span { background: linear-gradient(90deg,#a78bfa,#06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 700; }
+
+  /* fields */
+  .f-label { font-size: .78rem; color: rgba(255,255,255,.52); margin-bottom: .38rem; display: block; }
+  .f-wrap { display: flex; align-items: center; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09); border-radius: 12px; height: 46px; transition: border-color .2s, box-shadow .2s; overflow: hidden; margin-bottom: .85rem; }
+  .f-wrap:focus-within { border-color: rgba(124,111,255,.65); box-shadow: 0 0 0 3px rgba(124,111,255,.13); background: rgba(124,111,255,.05); }
+  .f-icon { width: 42px; display: flex; align-items: center; justify-content: center; color: rgba(124,111,255,.7); font-size: .85rem; flex-shrink: 0; }
+  .f-wrap input { flex: 1; background: transparent; border: none; outline: none; color: #e0e0e0; font-size: .88rem; height: 100%; padding: 0 10px; }
+  .f-wrap input::placeholder { color: rgba(107,107,138,.45); }
+  .eye-tog { width: 42px; height: 100%; background: none; border: none; cursor: pointer; color: rgba(124,111,255,.55); font-size: .9rem; display: flex; align-items: center; justify-content: center; transition: color .2s; flex-shrink: 0; }
+  .eye-tog:hover { color: #a855f7; }
+
+  /* ── Strength meter ── */
+  .strength-panel { background: rgba(10,8,28,.7); border: 1px solid rgba(124,111,255,.15); border-radius: 14px; padding: 12px 14px; margin: 6px 0 10px; display: none; }
+  .strength-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .strength-label-text { font-size: .72rem; font-weight: 700; letter-spacing: .4px; transition: color .3s; }
+  .entropy-badge { font-size: .62rem; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: rgba(255,255,255,.06); color: rgba(255,255,255,.4); border: 1px solid rgba(255,255,255,.08); transition: all .3s; }
+  /* segmented bar */
+  .seg-track { display: flex; gap: 3px; margin-bottom: 10px; }
+  .seg { flex: 1; height: 5px; border-radius: 99px; background: rgba(255,255,255,.07); transition: background .35s, transform .2s; }
+  .seg.active { transform: scaleY(1.4); }
+  /* requirements grid */
+  .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; margin-bottom: 10px; }
+  .req-item { display: flex; align-items: center; gap: 6px; font-size: .7rem; color: rgba(255,255,255,.35); transition: color .25s; padding: 3px 6px; border-radius: 7px; background: rgba(255,255,255,.03); border: 1px solid transparent; }
+  .req-item.done { color: #10b981; background: rgba(16,185,129,.08); border-color: rgba(16,185,129,.2); }
+  .req-item.fail { color: #ef4444; background: rgba(239,68,68,.06); border-color: rgba(239,68,68,.15); }
+  .req-icon { width: 14px; height: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .55rem; flex-shrink: 0; background: rgba(255,255,255,.07); transition: all .25s; }
+  .req-item.done .req-icon { background: #10b981; color: #fff; }
+  .req-item.fail .req-icon { background: rgba(239,68,68,.2); color: #ef4444; }
+  /* tip row */
+  .pwd-tip { font-size: .67rem; color: rgba(255,255,255,.3); display: flex; align-items: flex-start; gap: 6px; padding: 6px 8px; background: rgba(124,111,255,.05); border-radius: 8px; border-left: 2px solid rgba(124,111,255,.3); line-height: 1.5; }
+  .pwd-tip i { color: #7c6fff; flex-shrink: 0; margin-top: 1px; }
+  /* generate btn */
+  .gen-btn { display: flex; align-items: center; gap: 5px; font-size: .68rem; font-weight: 600; color: #a78bfa; background: rgba(124,111,255,.08); border: 1px solid rgba(124,111,255,.2); border-radius: 8px; padding: 4px 10px; cursor: pointer; transition: all .2s; margin-top: 8px; width: 100%; justify-content: center; }
+  .gen-btn:hover { background: rgba(124,111,255,.18); color: #c4b5fd; }
+  /* match */
+  .match-label { font-size: .73rem; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+  .caps-badge { display: none; align-items: center; gap: 5px; font-size: .68rem; font-weight: 600; color: #fbbf24; background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.25); border-radius: 6px; padding: 2px 7px; }
+  .caps-badge.show { display: flex; }
+
+  /* submit */
+  .submit-btn { height: 48px; width: 100%; border-radius: 13px; font-size: .95rem; font-weight: 700; background: linear-gradient(135deg,#7c6fff 0%,#a855f7 60%,#06b6d4 100%); border: none; color: #fff; cursor: pointer; box-shadow: 0 6px 24px rgba(124,111,255,.45); transition: transform .22s, box-shadow .22s; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 1.2rem; }
+  .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(124,111,255,.65); }
+
+  .auth-divider { border: none; border-top: 1px solid rgba(255,255,255,.07); margin: .9rem 0 .8rem; }
+  .footer-row { text-align: center; font-size: .8rem; color: rgba(255,255,255,.35); }
+  .footer-row a { color: #a78bfa; font-weight: 700; text-decoration: none; margin-left: 4px; }
+  .sec-row { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: .8rem; }
+  .sec-item { font-size: .64rem; color: rgba(255,255,255,.24); display: flex; align-items: center; gap: 4px; }
+  .sec-item i { color: rgba(124,111,255,.4); }
+
+  @keyframes glowPulse { 0%,100%{opacity:.7;transform:scale(1);} 50%{opacity:1;transform:scale(1.08);} }
+  @keyframes ringCW   { to { transform: rotate(360deg); } }
+  @keyframes ringCCW  { to { transform: rotate(-360deg); } }
+  @keyframes logoPulse { 0%,100%{box-shadow:0 8px 28px rgba(124,111,255,.5);} 50%{box-shadow:0 8px 44px rgba(124,111,255,.85);} }
+  @keyframes barShimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+
+  @media(max-width:860px) { .reg-left { display: none; } .reg-right { width: 100%; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reg-outer">
+  <canvas id="regCanvas"></canvas>
+
+  <!-- ══ LEFT ══ -->
+  <div class="reg-left">
+    <div class="shield-scene">
+      <div class="s-ring sr1"></div>
+      <div class="s-ring sr2"></div>
+      <div class="shield-svg-wrap">
+        <svg viewBox="0 0 120 120" width="150" height="150" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="sg2" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#7c6fff"/>
+              <stop offset="55%" stop-color="#a855f7"/>
+              <stop offset="100%" stop-color="#06b6d4"/>
+            </linearGradient>
+            <filter id="glow2"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <path d="M60 6 L12 26 L12 62 C12 86 34 106 60 114 C86 106 108 86 108 62 L108 26 Z" fill="url(#sg2)" opacity=".15"/>
+          <path d="M60 6 L12 26 L12 62 C12 86 34 106 60 114 C86 106 108 86 108 62 L108 26 Z" fill="none" stroke="url(#sg2)" stroke-width="2.5" filter="url(#glow2)"/>
+          <path d="M60 22 L26 36 L26 62 C26 78 40 94 60 100 C80 94 94 78 94 62 L94 36 Z" fill="url(#sg2)" opacity=".08"/>
+          <polyline points="40,60 53,74 80,46" fill="none" stroke="url(#sg2)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow2)"/>
+          <circle cx="60" cy="60" r="4" fill="#fff" opacity=".9"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="lp-title">Create Your<br/><span>Secure Account</span></div>
+    <p class="lp-sub">Join thousands protected by AI-powered phishing detection. Free, fast, reliable.</p>
+    <div class="feat-pills">
+      <span class="fpill" style="color:#10b981;border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.08);"><i class="bi bi-check-circle-fill"></i>Free Forever</span>
+      <span class="fpill" style="color:#a855f7;border-color:rgba(168,85,247,.35);background:rgba(168,85,247,.08);"><i class="bi bi-cpu-fill"></i>AI Powered</span>
+      <span class="fpill" style="color:#06b6d4;border-color:rgba(6,182,212,.35);background:rgba(6,182,212,.08);"><i class="bi bi-lightning-fill"></i>Instant Scan</span>
+      <span class="fpill" style="color:#f59e0b;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.08);"><i class="bi bi-file-earmark-pdf-fill"></i>PDF Report</span>
+    </div>
+  </div>
+
+  <!-- ══ RIGHT ══ -->
+  <div class="reg-right">
+    <div class="reg-card">
+      <div class="card-line"></div>
+      <div class="card-body-inner">
+
+        <div class="auth-logo">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="white">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5L12 1zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93C9.33 17.79 7 14.5 7 11V7.18L12 5z"/>
+            <circle cx="12" cy="12" r="2.2" fill="rgba(255,255,255,.88)"/>
+          </svg>
+        </div>
+        <div class="card-title">Create account</div>
+        <div class="card-sub">Join <span>PhishGuard AI</span> today</div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for cat, msg in messages %}
+            <div class="alert alert-{{ cat }} d-flex align-items-center gap-2 py-2 mb-2" style="font-size:.78rem;border-radius:10px;">
+              <i class="bi {% if cat=='danger' %}bi-x-circle-fill{% elif cat=='success' %}bi-check-circle-fill{% else %}bi-info-circle-fill{% endif %}"></i>{{ msg }}
+            </div>
+          {% endfor %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth.register') }}" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+          <label class="f-label">Username</label>
+          <div class="f-wrap">
+            <span class="f-icon"><i class="bi bi-person-fill"></i></span>
+            <input type="text" name="username" placeholder="johndoe" autocomplete="username" required/>
+          </div>
+
+          <label class="f-label">Email address</label>
+          <div class="f-wrap">
+            <span class="f-icon"><i class="bi bi-envelope-fill"></i></span>
+            <input type="email" name="email" placeholder="you@example.com" autocomplete="email" required/>
+          </div>
+
+          <label class="f-label d-flex align-items-center justify-content-between">
+            <span>Password</span>
+            <span class="caps-badge" id="capsWarn2"><i class="bi bi-keyboard"></i>CAPS LOCK</span>
+          </label>
+          <div class="f-wrap" style="height:auto;min-height:46px;flex-wrap:wrap;padding:0;">
+            <span class="f-icon" style="height:46px;"><i class="bi bi-lock-fill"></i></span>
+            <input type="password" name="password" id="regPassword" placeholder="Min 8 characters"
+                   autocomplete="new-password" style="height:46px;"
+                   oninput="evalStrength(this.value)"
+                   onkeyup="handleCaps(event,'capsWarn2')" required/>
+            <button type="button" class="eye-tog" style="height:46px;" onclick="togglePass('regPassword',this)">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+          <!-- Advanced strength panel -->
+          <div class="strength-panel" id="strengthPanel">
+            <div class="strength-header">
+              <span class="strength-label-text" id="strengthLabel">Too Weak</span>
+              <span class="entropy-badge" id="entropyBadge">0 bits</span>
+            </div>
+            <div class="seg-track">
+              <div class="seg" id="seg0"></div><div class="seg" id="seg1"></div>
+              <div class="seg" id="seg2"></div><div class="seg" id="seg3"></div>
+              <div class="seg" id="seg4"></div>
+            </div>
+            <div class="req-grid">
+              <div class="req-item" id="rq-len">
+                <span class="req-icon"><i class="bi bi-rulers"></i></span>
+                <span>8+ characters</span>
+              </div>
+              <div class="req-item" id="rq-upper">
+                <span class="req-icon"><i class="bi bi-type"></i></span>
+                <span>Uppercase (A–Z)</span>
+              </div>
+              <div class="req-item" id="rq-lower">
+                <span class="req-icon"><i class="bi bi-type"></i></span>
+                <span>Lowercase (a–z)</span>
+              </div>
+              <div class="req-item" id="rq-num">
+                <span class="req-icon"><i class="bi bi-123"></i></span>
+                <span>Number (0–9)</span>
+              </div>
+              <div class="req-item" id="rq-sym">
+                <span class="req-icon"><i class="bi bi-asterisk"></i></span>
+                <span>Special (!@#$…)</span>
+              </div>
+              <div class="req-item" id="rq-long">
+                <span class="req-icon"><i class="bi bi-shield-check"></i></span>
+                <span>12+ chars (bonus)</span>
+              </div>
+            </div>
+            <div class="pwd-tip" id="pwdTip">
+              <i class="bi bi-lightbulb-fill"></i>
+              <span id="pwdTipText">Start typing to see live feedback.</span>
+            </div>
+            <button type="button" class="gen-btn" onclick="generatePassword()">
+              <i class="bi bi-magic"></i>Generate strong password
+            </button>
+          </div>
+
+          <label class="f-label d-flex align-items-center justify-content-between">
+            <span>Confirm Password</span>
+            <span class="match-label" id="matchLabel"></span>
+          </label>
+          <div class="f-wrap">
+            <span class="f-icon"><i class="bi bi-shield-lock-fill"></i></span>
+            <input type="password" name="confirm_password" id="confirmPassword"
+                   placeholder="Repeat password" autocomplete="new-password"
+                   oninput="checkMatch('regPassword','confirmPassword')" required/>
+            <button type="button" class="eye-tog" onclick="togglePass('confirmPassword',this)">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+
+          <button type="submit" class="submit-btn">
+            <i class="bi bi-person-plus"></i>Create Account
+          </button>
+        </form>
+
+        <hr class="auth-divider">
+        <div class="footer-row">
+          Already have an account?
+          <a href="{{ url_for('auth.login') }}">Sign in <i class="bi bi-arrow-right" style="font-size:.7rem;"></i></a>
+        </div>
+        <div class="sec-row">
+          <span class="sec-item"><i class="bi bi-shield-lock-fill"></i>256-bit encrypted</span>
+          <span class="sec-item"><i class="bi bi-patch-check-fill"></i>CSRF protected</span>
+          <span class="sec-item"><i class="bi bi-key-fill"></i>Bcrypt hashed</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function togglePass(id, btn) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+  const ic = btn.querySelector('i');
+  if (ic) ic.className = el.type === 'text' ? 'bi bi-eye-slash' : 'bi bi-eye';
+}
+
+function handleCaps(e, badgeId) {
+  const on = e.getModifierState && e.getModifierState('CapsLock');
+  document.getElementById(badgeId)?.classList.toggle('show', !!on);
+}
+
+/* ── Entropy calculation ── */
+function calcEntropy(val) {
+  let pool = 0;
+  if (/[a-z]/.test(val)) pool += 26;
+  if (/[A-Z]/.test(val)) pool += 26;
+  if (/[0-9]/.test(val)) pool += 10;
+  if (/[^A-Za-z0-9]/.test(val)) pool += 32;
+  return pool ? Math.round(val.length * Math.log2(pool)) : 0;
+}
+
+/* ── Smart tips ── */
+const TIPS = [
+  'Use a passphrase: 4 random words are easy to remember and very strong.',
+  'Avoid names, birthdays, or dictionary words — they are easy to guess.',
+  'Mix symbols inside words (e.g. P@ssw0rd!) for extra entropy.',
+  'Longer passwords are exponentially harder to crack than complex short ones.',
+  'Never reuse passwords across different websites.',
+  'A 16-character password takes centuries to brute-force.',
+];
+let _tipIdx = 0;
+
+function evalStrength(val) {
+  const panel = document.getElementById('strengthPanel');
+  if (!val) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+
+  const reqs = [
+    { id: 'rq-len',   ok: val.length >= 8 },
+    { id: 'rq-upper', ok: /[A-Z]/.test(val) },
+    { id: 'rq-lower', ok: /[a-z]/.test(val) },
+    { id: 'rq-num',   ok: /[0-9]/.test(val) },
+    { id: 'rq-sym',   ok: /[^A-Za-z0-9]/.test(val) },
+    { id: 'rq-long',  ok: val.length >= 12 },
+  ];
+
+  let score = reqs.filter(r => r.ok).length;
+
+  reqs.forEach(r => {
+    const el = document.getElementById(r.id);
+    if (!el) return;
+    el.classList.toggle('done', r.ok);
+    el.classList.toggle('fail', !r.ok && val.length > 0);
+    const ic = el.querySelector('.req-icon i');
+    if (ic) ic.className = r.ok ? 'bi bi-check-lg' : 'bi bi-x-lg';
+  });
+
+  /* segmented bar colours */
+  const SEG_COLORS = [
+    '#ef4444', // 1 — very weak
+    '#f97316', // 2 — weak
+    '#eab308', // 3 — fair
+    '#3b82f6', // 4 — good
+    '#10b981', // 5 — strong
+    '#10b981', // 6 — excellent
+  ];
+  const col = SEG_COLORS[Math.min(score - 1, 5)] || 'rgba(255,255,255,.07)';
+  for (let i = 0; i < 5; i++) {
+    const seg = document.getElementById('seg' + i);
+    if (!seg) continue;
+    const filled = i < Math.ceil(score * 5 / 6);
+    seg.style.background = filled ? col : 'rgba(255,255,255,.07)';
+    seg.classList.toggle('active', filled);
+  }
+
+  /* label + colour */
+  const LEVELS = ['','Too Weak','Weak','Fair','Good','Strong','Excellent'];
+  const lbl = document.getElementById('strengthLabel');
+  lbl.textContent = LEVELS[score] || 'Too Weak';
+  lbl.style.color = col;
+
+  /* entropy badge */
+  const bits = calcEntropy(val);
+  const eb = document.getElementById('entropyBadge');
+  eb.textContent = bits + ' bits';
+  eb.style.background = bits >= 60 ? 'rgba(16,185,129,.15)' : bits >= 40 ? 'rgba(59,130,246,.15)' : 'rgba(239,68,68,.12)';
+  eb.style.color = bits >= 60 ? '#10b981' : bits >= 40 ? '#60a5fa' : '#f87171';
+  eb.style.borderColor = bits >= 60 ? 'rgba(16,185,129,.3)' : bits >= 40 ? 'rgba(59,130,246,.3)' : 'rgba(239,68,68,.2)';
+
+  /* rotating tip */
+  document.getElementById('pwdTipText').textContent = TIPS[_tipIdx % TIPS.length];
+
+  checkMatch();
+}
+
+function checkMatch() {
+  const p = document.getElementById('regPassword');
+  const c = document.getElementById('confirmPassword');
+  const lbl = document.getElementById('matchLabel');
+  if (!lbl || !c?.value) { if (lbl) lbl.innerHTML = ''; return; }
+  const match = p.value === c.value;
+  lbl.innerHTML = match
+    ? '<i class="bi bi-check-circle-fill" style="color:#10b981"></i><span style="color:#10b981">Match</span>'
+    : '<i class="bi bi-x-circle-fill" style="color:#ef4444"></i><span style="color:#ef4444">No match</span>';
+}
+
+/* ── Password generator ── */
+function generatePassword() {
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghjkmnpqrstuvwxyz';
+  const nums  = '23456789';
+  const syms  = '!@#$%^&*-_=+';
+  const all   = upper + lower + nums + syms;
+  let pwd = [
+    upper[Math.floor(Math.random() * upper.length)],
+    upper[Math.floor(Math.random() * upper.length)],
+    lower[Math.floor(Math.random() * lower.length)],
+    lower[Math.floor(Math.random() * lower.length)],
+    nums [Math.floor(Math.random() * nums.length)],
+    nums [Math.floor(Math.random() * nums.length)],
+    syms [Math.floor(Math.random() * syms.length)],
+    syms [Math.floor(Math.random() * syms.length)],
+  ];
+  for (let i = 8; i < 16; i++) pwd.push(all[Math.floor(Math.random() * all.length)]);
+  /* Fisher-Yates shuffle */
+  for (let i = pwd.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pwd[i], pwd[j]] = [pwd[j], pwd[i]];
+  }
+  const result = pwd.join('');
+  const inp = document.getElementById('regPassword');
+  inp.value = result;
+  inp.type = 'text';
+  /* update eye icon */
+  const eyeBtn = inp.closest('.f-wrap')?.querySelector('.eye-tog i');
+  if (eyeBtn) eyeBtn.className = 'bi bi-eye-slash';
+  _tipIdx++;
+  evalStrength(result);
+  /* flash the field */
+  inp.closest('.f-wrap').style.borderColor = '#10b981';
+  inp.closest('.f-wrap').style.boxShadow = '0 0 0 3px rgba(16,185,129,.18)';
+  setTimeout(() => {
+    inp.closest('.f-wrap').style.borderColor = '';
+    inp.closest('.f-wrap').style.boxShadow = '';
+  }, 1200);
+}
+
+/* Particle canvas */
+(function () {
+  const canvas = document.getElementById('regCanvas');
+  const ctx = canvas.getContext('2d');
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  resize(); window.addEventListener('resize', resize);
+  const C = ['rgba(124,111,255,','rgba(168,85,247,','rgba(6,182,212,','rgba(255,255,255,'];
+  const pts = Array.from({ length: 75 }, () => ({
+    x: Math.random() * innerWidth, y: Math.random() * innerHeight,
+    r: Math.random() * 1.8 + .7,
+    col: C[Math.floor(Math.random() * C.length)],
+    a: Math.random() * .35 + .07,
+    dx: (Math.random() - .5) * .32, dy: (Math.random() - .5) * .32,
+    p: Math.random() * Math.PI * 2, ps: Math.random() * .016 + .007,
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pts.forEach(p => {
+      p.p += p.ps;
+      const a = p.a * (.5 + .5 * Math.sin(p.p));
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.col + a + ')'; ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = p.col + (a * .09) + ')'; ctx.fill();
+      p.x += p.dx; p.y += p.dy;
+      if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
+      if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
+    });
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+      const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < 115) {
+        ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y);
+        ctx.strokeStyle = 'rgba(124,111,255,' + (.065 * (1 - d / 115)) + ')';
+        ctx.lineWidth = .5; ctx.stroke();
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+{% endblock %}

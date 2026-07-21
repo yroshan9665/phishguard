@@ -1,0 +1,439 @@
+{% extends "base.html" %}
+{% block title %}Scan URL — PhishGuard AI{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Terminal card ── */
+  .scan-terminal {
+    background: rgba(7,7,26,.92);
+    border: 1px solid rgba(124,111,255,.25);
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,.5), 0 0 0 1px rgba(124,111,255,.08) inset,
+                0 0 60px rgba(124,111,255,.04);
+    backdrop-filter: blur(16px);
+    transition: box-shadow .3s;
+  }
+  .scan-terminal:hover {
+    box-shadow: 0 32px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(124,111,255,.15) inset,
+                0 0 80px rgba(124,111,255,.07);
+  }
+  .terminal-bar {
+    background: rgba(124,111,255,.08);
+    border-bottom: 1px solid rgba(124,111,255,.15);
+    padding: .65rem 1.25rem;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .t-dot { width: 11px; height: 11px; border-radius: 50%; }
+
+  /* ── URL input ── */
+  .url-field-wrap {
+    display: flex; align-items: center;
+    background: rgba(255,255,255,.035);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 14px;
+    transition: border-color .2s, box-shadow .2s;
+    overflow: hidden;
+  }
+  .url-field-wrap:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,111,255,.14), 0 0 30px rgba(124,111,255,.06);
+  }
+  .url-proto {
+    padding: 0 14px; height: 54px; display: flex;
+    align-items: center; gap: 6px;
+    background: rgba(124,111,255,.12);
+    border-right: 1px solid rgba(124,111,255,.18);
+    color: var(--accent); font-size: .82rem; font-weight: 700;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .url-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--txt); font-size: .95rem;
+    padding: 0 16px; height: 54px;
+  }
+  .url-input::placeholder { color: rgba(107,107,138,.5); }
+  .url-clear-btn {
+    background: none; border: none; color: var(--muted);
+    padding: 0 14px; cursor: pointer; font-size: 1rem; height: 54px;
+    display: none; align-items: center; transition: color .2s;
+  }
+  .url-clear-btn:hover { color: var(--danger); }
+  .url-clear-btn.show { display: flex; }
+
+  /* ── Scan button ── */
+  .scan-btn-main {
+    height: 54px; border-radius: 14px !important;
+    font-size: 1rem; font-weight: 700; letter-spacing: .3px;
+    background: linear-gradient(135deg, #7c6fff, #a855f7) !important;
+    border: none !important;
+    box-shadow: 0 6px 24px rgba(124,111,255,.4) !important;
+    transition: all .22s !important;
+    position: relative; overflow: hidden;
+  }
+  .scan-btn-main::before {
+    content: '';
+    position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+    transition: left .5s;
+  }
+  .scan-btn-main:not(:disabled):hover::before { left: 100%; }
+  .scan-btn-main:not(:disabled):hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 12px 32px rgba(124,111,255,.55) !important;
+  }
+
+  /* ── Validation feedback ── */
+  .url-feedback {
+    font-size: .78rem; margin-top: 6px; min-height: 18px;
+    display: flex; align-items: center; gap: 6px;
+    transition: all .2s;
+  }
+
+  /* ── Scan progress ── */
+  .scan-progress { display: none; }
+  .scan-progress.active { display: block; }
+  .progress-steps { display: flex; flex-direction: column; gap: 8px; margin-top: 1rem; }
+  .pstep {
+    display: flex; align-items: center; gap: 10px;
+    font-size: .82rem; color: var(--muted);
+    padding: 10px 14px; border-radius: 12px;
+    background: rgba(255,255,255,.025); border: 1px solid transparent;
+    transition: all .35s;
+  }
+  .pstep.active {
+    color: var(--txt); background: rgba(124,111,255,.1);
+    border-color: rgba(124,111,255,.25);
+    box-shadow: 0 0 20px rgba(124,111,255,.08);
+  }
+  .pstep.done {
+    color: #10b981; background: rgba(16,185,129,.07);
+    border-color: rgba(16,185,129,.2);
+  }
+  .pstep-icon {
+    width: 28px; height: 28px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: .82rem;
+  }
+
+  /* ── Legend cards ── */
+  .legend-card {
+    border-radius: 16px; padding: 1.1rem 1rem .9rem; text-align: center;
+    transition: transform .2s, box-shadow .2s;
+    backdrop-filter: blur(12px);
+  }
+  .legend-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,.3); }
+  .legend-icon-box {
+    width: 48px; height: 48px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto .75rem; font-size: 1.4rem;
+  }
+
+  /* ── Feature chips ── */
+  .feature-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: .72rem; font-weight: 600; padding: .3em .75em;
+    border-radius: 7px; margin: 3px;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .feature-chip:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+
+  /* ── Shield pulse ── */
+  .shield-wrap {
+    width: 80px; height: 80px; border-radius: 24px; margin: 0 auto .9rem;
+    background: linear-gradient(135deg, rgba(124,111,255,.12), rgba(168,85,247,.12));
+    border: 1px solid rgba(124,111,255,.25);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    animation: shieldPulse 3s ease-in-out infinite;
+  }
+  .shield-wrap::before {
+    content: '';
+    position: absolute; inset: -8px; border-radius: 30px;
+    border: 1px solid rgba(124,111,255,.15);
+    animation: shieldRing 3s ease-in-out infinite;
+  }
+  @keyframes shieldPulse { 0%,100%{box-shadow:0 0 0 0 rgba(124,111,255,.2);} 50%{box-shadow:0 0 0 12px rgba(124,111,255,0);} }
+  @keyframes shieldRing  { 0%,100%{transform:scale(1);opacity:.6;} 50%{transform:scale(1.08);opacity:1;} }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h4 class="fw-bold mb-0">
+      <span style="background:linear-gradient(90deg,#7c6fff,#a855f7,#06b6d4);
+                   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+                   font-size:1.5rem;">
+        <i class="bi bi-search me-2" style="-webkit-text-fill-color:#7c6fff;"></i>URL Scanner
+      </span>
+    </h4>
+    <p class="mb-0" style="font-size:.82rem;color:var(--muted);">
+      AI-powered phishing detection · 15+ signals analysed
+    </p>
+  </div>
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-sm"
+     style="border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--txt);">
+    <i class="bi bi-arrow-left me-1"></i>Dashboard
+  </a>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8 col-xl-7">
+
+    <!-- ══ SCAN TERMINAL ══ -->
+    <div class="scan-terminal mb-4">
+
+      <!-- Terminal top bar -->
+      <div class="terminal-bar">
+        <div class="t-dot" style="background:#ef4444;box-shadow:0 0 6px #ef4444;"></div>
+        <div class="t-dot" style="background:#f59e0b;box-shadow:0 0 6px #f59e0b;"></div>
+        <div class="t-dot" style="background:#10b981;box-shadow:0 0 6px #10b981;"></div>
+        <span style="font-size:.72rem;color:var(--muted);margin-left:8px;">
+          phishguard ~ url-scanner
+        </span>
+        <span style="margin-left:auto;font-size:.68rem;color:rgba(124,111,255,.7);
+                     display:flex;align-items:center;gap:5px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:#10b981;
+                       box-shadow:0 0 6px #10b981;display:inline-block;
+                       animation:pulseDot 1.8s ease-out infinite;"></span>
+          AI Ready
+        </span>
+      </div>
+
+      <div class="p-4">
+
+        <!-- Shield icon -->
+        <div class="text-center mb-4">
+          <div class="shield-wrap">
+            <svg viewBox="0 0 24 24" width="38" height="38"
+                 style="fill:none;stroke:url(#sgScan);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;">
+              <defs>
+                <linearGradient id="sgScan" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#7c6fff"/>
+                  <stop offset="100%" stop-color="#a855f7"/>
+                </linearGradient>
+              </defs>
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="M9 12l2 2 4-4"/>
+            </svg>
+          </div>
+          <h5 class="fw-bold mb-1" style="font-size:1.15rem;">Analyse a Website</h5>
+          <p style="color:var(--muted);font-size:.845rem;margin:0;">
+            Paste any URL — we check SSL, domain age, page content, JS patterns & more.
+          </p>
+        </div>
+
+        <!-- URL form -->
+        <form method="POST" action="{{ url_for('scanner.scan') }}" id="scanForm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+          <label class="form-label" style="font-size:.82rem;font-weight:600;">
+            <i class="bi bi-link-45deg me-1" style="color:var(--accent);"></i>Website URL
+          </label>
+
+          <div class="url-field-wrap mb-1">
+            <div class="url-proto">
+              <i class="bi bi-globe2"></i> https://
+            </div>
+            <input type="text" name="url" id="urlInput" class="url-input"
+                   placeholder="example.com or paste the full URL"
+                   autocomplete="off" spellcheck="false"
+                   oninput="validateUrl(this.value)" required/>
+            <button type="button" class="url-clear-btn" id="clearBtn" onclick="clearUrl()">
+              <i class="bi bi-x-circle-fill"></i>
+            </button>
+          </div>
+
+          <div class="url-feedback" id="urlFeedback"></div>
+
+          <!-- scan progress -->
+          <div class="scan-progress mt-3" id="scanProgress">
+            <div class="progress-steps" id="progressSteps">
+              <div class="pstep" id="ps1">
+                <div class="pstep-icon" style="background:rgba(124,111,255,.12);">
+                  <i class="bi bi-globe" style="color:var(--accent);"></i>
+                </div>
+                <span>Fetching URL & checking SSL certificate…</span>
+                <span class="ms-auto" id="ps1spin" style="display:none;">
+                  <span class="spinner-border spinner-border-sm" style="color:var(--accent);"></span>
+                </span>
+              </div>
+              <div class="pstep" id="ps2">
+                <div class="pstep-icon" style="background:rgba(6,182,212,.12);">
+                  <i class="bi bi-search" style="color:#06b6d4;"></i>
+                </div>
+                <span>Extracting page content & features…</span>
+                <span class="ms-auto" id="ps2spin" style="display:none;">
+                  <span class="spinner-border spinner-border-sm" style="color:#06b6d4;"></span>
+                </span>
+              </div>
+              <div class="pstep" id="ps3">
+                <div class="pstep-icon" style="background:rgba(168,85,247,.12);">
+                  <i class="bi bi-cpu" style="color:#a855f7;"></i>
+                </div>
+                <span>Running AI classification model…</span>
+                <span class="ms-auto" id="ps3spin" style="display:none;">
+                  <span class="spinner-border spinner-border-sm" style="color:#a855f7;"></span>
+                </span>
+              </div>
+              <div class="pstep" id="ps4">
+                <div class="pstep-icon" style="background:rgba(16,185,129,.12);">
+                  <i class="bi bi-clipboard-check" style="color:#10b981;"></i>
+                </div>
+                <span>Generating security report…</span>
+                <span class="ms-auto" id="ps4spin" style="display:none;">
+                  <span class="spinner-border spinner-border-sm" style="color:#10b981;"></span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 scan-btn-main mt-3" id="scanBtn">
+            <span id="btnText">
+              <i class="bi bi-shield-shaded me-2"></i>Analyse URL
+            </span>
+            <span id="btnSpinner" class="d-none">
+              <span class="spinner-border spinner-border-sm me-2"></span>Analysing…
+            </span>
+          </button>
+        </form>
+
+        <!-- Feature chips -->
+        <div class="mt-4 text-center">
+          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.7px;
+                      color:var(--muted);margin-bottom:.6rem;">15 signals checked</div>
+          {% for chip, c in [
+            ('SSL Certificate','#06b6d4'), ('Domain Age','#7c6fff'),
+            ('IP Detection','#a855f7'), ('Subdomain Count','#10b981'),
+            ('Suspicious Keywords','#f59e0b'), ('Login Forms','#ef4444'),
+            ('Hidden Elements','#ef4444'), ('JS Patterns','#a855f7'),
+            ('Redirect Count','#f59e0b'), ('External Links','#06b6d4'),
+            ('HTTPS','#10b981'), ('Special Chars','#f59e0b'),
+            ('URL Length','#7c6fff'), ('@ Symbol','#ef4444'),
+            ('Dot Count','#a855f7')
+          ] %}
+          <span class="feature-chip"
+                style="background:{{ c }}14;color:{{ c }};border:1px solid {{ c }}30;">
+            <i class="bi bi-check-circle-fill" style="font-size:.6rem;"></i>{{ chip }}
+          </span>
+          {% endfor %}
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ LEGEND CARDS ══ -->
+    <div class="row g-3">
+      {% for icon, hexc, label, desc, bg in [
+        ('bi-shield-fill-check','#10b981','Safe',
+         'No phishing signals detected','rgba(16,185,129,.08)'),
+        ('bi-exclamation-triangle-fill','#f59e0b','Suspicious',
+         'Some risk indicators found','rgba(245,158,11,.08)'),
+        ('bi-bug-fill','#ef4444','Phishing',
+         'Strong phishing indicators','rgba(239,68,68,.08)'),
+      ] %}
+      <div class="col-md-4">
+        <div class="card legend-card" style="border-color:{{ hexc }}28;background:{{ bg }};backdrop-filter:blur(12px);">
+          <div class="legend-icon-box" style="background:{{ hexc }}18;border:1px solid {{ hexc }}35;">
+            <i class="bi {{ icon }}" style="color:{{ hexc }};filter:drop-shadow(0 0 6px {{ hexc }});"></i>
+          </div>
+          <div class="fw-bold" style="font-size:.9rem;color:{{ hexc }};">{{ label }}</div>
+          <div style="font-size:.75rem;color:var(--muted);margin-top:4px;">{{ desc }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const urlInput = document.getElementById('urlInput');
+const clearBtn = document.getElementById('clearBtn');
+const feedback = document.getElementById('urlFeedback');
+const scanForm = document.getElementById('scanForm');
+const scanBtn  = document.getElementById('scanBtn');
+const btnText  = document.getElementById('btnText');
+const btnSpin  = document.getElementById('btnSpinner');
+const progress = document.getElementById('scanProgress');
+const steps    = ['ps1','ps2','ps3','ps4'];
+
+function validateUrl(val){
+  clearBtn.classList.toggle('show', val.length > 0);
+  if(!val){ feedback.innerHTML=''; return; }
+  const urlPat = /^(https?:\/\/)?([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}(\/.*)?$/;
+  if(urlPat.test(val)){
+    feedback.innerHTML =
+      `<i class="bi bi-check-circle-fill" style="color:#10b981;"></i>
+       <span style="color:#10b981;">Valid URL format</span>`;
+  } else {
+    feedback.innerHTML =
+      `<i class="bi bi-x-circle-fill" style="color:#ef4444;"></i>
+       <span style="color:#ef4444;">Enter a valid URL (e.g. https://example.com)</span>`;
+  }
+}
+
+function clearUrl(){
+  urlInput.value='';
+  clearBtn.classList.remove('show');
+  feedback.innerHTML='';
+  urlInput.focus();
+}
+
+function resetForm(){
+  btnText.classList.remove('d-none');
+  btnSpin.classList.add('d-none');
+  scanBtn.disabled = false;
+  progress.classList.remove('active');
+  steps.forEach(sid=>{
+    const el=document.getElementById(sid);
+    el.classList.remove('active','done');
+    const spin=document.getElementById(sid+'spin');
+    if(spin) spin.style.display='none';
+    const ic=el.querySelector('.pstep-icon i');
+    if(ic && ic.dataset.orig) ic.className=ic.dataset.orig;
+  });
+}
+
+steps.forEach(sid=>{
+  const ic=document.getElementById(sid).querySelector('.pstep-icon i');
+  if(ic) ic.dataset.orig=ic.className;
+});
+
+window.addEventListener('pageshow',function(e){
+  if(e.persisted) resetForm();
+});
+
+scanForm.addEventListener('submit', function(){
+  const val = urlInput.value.trim();
+  if(!val) return;
+  btnText.classList.add('d-none');
+  btnSpin.classList.remove('d-none');
+  scanBtn.disabled = true;
+  progress.classList.add('active');
+
+  const delays=[0, 900, 2200, 3800];
+  steps.forEach((sid,idx)=>{
+    setTimeout(()=>{
+      if(idx>0){
+        const prev=document.getElementById(steps[idx-1]);
+        prev.classList.remove('active');
+        prev.classList.add('done');
+        const prevSpin=document.getElementById(steps[idx-1]+'spin');
+        if(prevSpin) prevSpin.style.display='none';
+        const ic=prev.querySelector('.pstep-icon i');
+        if(ic){ ic.className='bi bi-check-circle-fill'; ic.style.color='#10b981'; }
+      }
+      const cur=document.getElementById(sid);
+      cur.classList.add('active');
+      const spin=document.getElementById(sid+'spin');
+      if(spin) spin.style.display='block';
+    }, delays[idx]);
+  });
+});
+</script>
+{% endblock %}

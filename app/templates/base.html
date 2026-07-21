@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}PhishGuard{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    /* ── CSS Variables ── */
+    :root {
+      --accent: #7c6fff;
+      --accent2: #a855f7;
+      --cyan: #06b6d4;
+      --safe: #10b981;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --bg: #0f0f1a;
+      --card-bg: #1a1a2e;
+      --border: #2a2a4a;
+      --txt: #e0e0e0;
+      --muted: #6b6b8a;
+    }
+
+    /* ── Base ── */
+    body { background:#07071a; color:var(--txt); min-height:100vh; font-family:'Segoe UI',sans-serif; }
+
+    /* ── Navbar ── */
+    .navbar {
+      background:rgba(10,9,28,.85) !important;
+      border-bottom:1px solid rgba(124,111,255,.18) !important;
+      backdrop-filter:blur(20px);
+      box-shadow:0 2px 30px rgba(0,0,0,.4);
+    }
+    .navbar-brand {
+      font-weight:800; font-size:1.25rem; color:#fff !important;
+      display:flex; align-items:center; gap:8px;
+    }
+    .navbar-brand i { color:#7c6fff !important; filter:drop-shadow(0 0 8px rgba(124,111,255,.8)); }
+    .nav-link { color:rgba(180,180,210,.8) !important; font-weight:500; transition:all .2s; }
+    .nav-link:hover { color:#fff !important; text-shadow:0 0 12px rgba(124,111,255,.6); }
+    .nav-link.active { color:var(--accent) !important; }
+    /* active nav indicator */
+    .nav-item { position:relative; }
+
+    /* ── Cards ── */
+    .card {
+      background:rgba(16,14,40,.75);
+      border:1px solid rgba(124,111,255,.14);
+      border-radius:16px; color:var(--txt);
+      backdrop-filter:blur(16px);
+      box-shadow:0 4px 24px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .card-header {
+      background:rgba(255,255,255,.025);
+      border-bottom:1px solid rgba(124,111,255,.1);
+      padding:.8rem 1.1rem; font-weight:600; font-size:.875rem;
+    }
+
+    /* ── Page header ── */
+    .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; flex-wrap:wrap; gap:.75rem; }
+
+    /* ── Buttons ── */
+    .btn-primary { background:var(--accent); border-color:var(--accent); }
+    .btn-primary:hover { background:#574fd6; border-color:#574fd6; }
+
+    /* ── Form controls ── */
+    .form-control, .input-group-text {
+      background:#0f0f1a; border-color:var(--border); color:var(--txt);
+    }
+    .form-control:focus {
+      background:#0f0f1a; color:var(--txt);
+      border-color:var(--accent); box-shadow:0 0 0 .2rem rgba(108,99,255,.25);
+    }
+    .form-control::placeholder { color:#555; }
+    .form-label { color:var(--txt); font-size:.82rem; margin-bottom:.4rem; }
+
+    /* ── Badges ── */
+    .badge-safe       { background:#28a745; color:#fff; }
+    .badge-suspicious { background:#ffc107; color:#000; }
+    .badge-phishing   { background:#dc3545; color:#fff; }
+
+    /* ── Alerts ── */
+    .alert { border-radius:10px; }
+
+    /* ── Table ── */
+    .table { color:var(--txt); }
+    .table thead th { background:var(--card-bg); border-color:var(--border); }
+    .table td, .table th { border-color:var(--border); }
+    .table-hover tbody tr:hover { background:#1e1e35; }
+
+    /* ── Stat cards ── */
+    .stat-card { border-radius:12px; padding:1.2rem 1.5rem; color:#fff; }
+    .stat-card.total      { background:linear-gradient(135deg,#6c63ff,#4a47a3); }
+    .stat-card.safe       { background:linear-gradient(135deg,#28a745,#1a6b2e); }
+    .stat-card.suspicious { background:linear-gradient(135deg,#ffc107,#b38600); }
+    .stat-card.phishing   { background:linear-gradient(135deg,#dc3545,#9b1a26); }
+
+    /* ── Risk bar ── */
+    .risk-bar { height:12px; border-radius:6px; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-track { background:#0f0f1a; }
+    ::-webkit-scrollbar-thumb { background:#2a2a4a; border-radius:3px; }
+
+    /* ── Auth layout (shared by all auth pages) ── */
+    .auth-outer {
+      position:fixed; inset:0; z-index:1;
+      display:flex; overflow:hidden;
+    }
+    .auth-left {
+      flex:1; position:relative;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      overflow:hidden;
+      background:linear-gradient(145deg,#04041a 0%,#0a0625 40%,#0d0830 100%);
+    }
+    .auth-left::before {
+      content:''; position:absolute; inset:0;
+      background:
+        radial-gradient(ellipse 70% 60% at 30% 30%,rgba(124,111,255,.22) 0%,transparent 65%),
+        radial-gradient(ellipse 50% 50% at 75% 70%,rgba(168,85,247,.14) 0%,transparent 60%),
+        radial-gradient(ellipse 40% 35% at 50% 10%,rgba(6,182,212,.10) 0%,transparent 55%);
+    }
+    .auth-left::after {
+      content:''; position:absolute; inset:0;
+      background-image:
+        linear-gradient(rgba(124,111,255,.06) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(124,111,255,.06) 1px,transparent 1px);
+      background-size:48px 48px;
+      mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 40%,transparent 100%);
+      -webkit-mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 40%,transparent 100%);
+    }
+    .left-content { position:relative; z-index:2; text-align:center; padding:2rem; max-width:420px; }
+    .left-title { font-size:1.9rem; font-weight:800; color:#fff; line-height:1.2; margin-bottom:.7rem; }
+    .left-title span {
+      background:linear-gradient(90deg,#7c6fff,#a855f7,#06b6d4);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    }
+    .left-sub { font-size:.88rem; color:rgba(255,255,255,.45); line-height:1.6; max-width:300px; margin:0 auto 2rem; }
+    .feat-pills { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+    .fpill { display:inline-flex; align-items:center; gap:6px; font-size:.72rem; font-weight:600; padding:.35em .9em; border-radius:50px; border:1px solid; backdrop-filter:blur(8px); }
+
+    /* orbs */
+    .orb { position:absolute; border-radius:50%; filter:blur(60px); pointer-events:none; animation:orbFloat 6s ease-in-out infinite; }
+    .orb1 { width:220px;height:220px;top:-60px;left:-60px;background:rgba(124,111,255,.12); }
+    .orb2 { width:180px;height:180px;bottom:-40px;right:-40px;background:rgba(168,85,247,.10);animation-delay:2s; }
+    .orb3 { width:140px;height:140px;bottom:20%;left:5%;background:rgba(6,182,212,.08);animation-delay:4s; }
+
+    /* shield animations */
+    .big-shield { width:140px;height:140px;margin:0 auto 2rem;position:relative; }
+    .big-shield svg { width:100%;height:100%; }
+    .shield-glow { position:absolute;inset:-20px;border-radius:50%;background:radial-gradient(circle,rgba(124,111,255,.3) 0%,transparent 70%);animation:shieldGlow 3s ease-in-out infinite; }
+    .shield-ring { position:absolute;inset:-8px;border-radius:50%;border:1.5px solid rgba(124,111,255,.25);animation:ringRotate 8s linear infinite; }
+    .shield-ring::before { content:'';position:absolute;top:-3px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;background:#7c6fff;box-shadow:0 0 8px #7c6fff; }
+
+    /* right panel */
+    .auth-right {
+      width:460px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      padding:1.5rem;
+      background:rgba(7,7,26,.96);
+      border-left:1px solid rgba(124,111,255,.12);
+      overflow-y:auto; position:relative;
+    }
+    .auth-right::before { content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(124,111,255,.04) 0%,transparent 40%);pointer-events:none; }
+    .auth-card { width:100%; max-width:380px; position:relative; z-index:1; }
+
+    /* card accent bar */
+    .card-accent-bar { height:3px;border-radius:3px;background:linear-gradient(90deg,#7c6fff,#a855f7,#06b6d4,#7c6fff);background-size:200% 100%;margin-bottom:1.6rem;animation:barShimmer 3s linear infinite; }
+
+    /* auth logo */
+    .auth-logo { width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#7c6fff,#a855f7 55%,#06b6d4);display:flex;align-items:center;justify-content:center;margin:0 auto .85rem;animation:logoPulse 2.8s ease-in-out infinite; }
+
+    /* field rows */
+    .field-row { margin-bottom:.95rem; }
+    .icon-input { position:relative; }
+    .icon-input .fi-icon { position:absolute;left:0;top:0;bottom:0;width:44px;display:flex;align-items:center;justify-content:center;color:var(--accent);pointer-events:none;z-index:2;font-size:.88rem; }
+    .icon-input .form-control { padding-left:44px !important;border-radius:12px !important;height:46px;background:rgba(255,255,255,.04) !important;border:1px solid rgba(255,255,255,.09) !important; }
+    .icon-input .form-control:focus { background:rgba(124,111,255,.06) !important;border-color:var(--accent) !important;box-shadow:0 0 0 3px rgba(124,111,255,.14) !important; }
+
+    /* password eye */
+    .pw-wrap { position:relative; }
+    .pw-wrap .form-control { border-radius:12px !important;height:46px;padding-right:52px !important;padding-left:44px !important;background:rgba(255,255,255,.04) !important;border:1px solid rgba(255,255,255,.09) !important; }
+    .pw-wrap .form-control:focus { background:rgba(124,111,255,.06) !important;border-color:var(--accent) !important;box-shadow:0 0 0 3px rgba(124,111,255,.14) !important; }
+    .pw-icon-left { position:absolute;left:0;top:0;bottom:0;width:44px;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2;color:var(--accent);font-size:.88rem; }
+    .eye-btn { position:absolute;right:0;top:0;bottom:0;width:48px;border:none;outline:none;background:transparent;cursor:pointer;z-index:3;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:0 12px 12px 0; }
+    .eye-btn::before { content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(124,111,255,.1),rgba(168,85,247,.1));border-left:1px solid rgba(124,111,255,.14);border-radius:0 12px 12px 0;transition:background .2s; }
+    .eye-btn.eye-active::before { background:linear-gradient(135deg,rgba(124,111,255,.28),rgba(168,85,247,.28)); }
+    .eye-btn:hover::before { background:linear-gradient(135deg,rgba(124,111,255,.2),rgba(168,85,247,.2)); }
+    .eye-btn svg.eye-icon { width:16px;height:16px;position:relative;z-index:1;stroke:var(--accent);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:stroke .2s,transform .2s; }
+    .eye-btn.eye-active svg.eye-icon { stroke:#c4baff;transform:scale(1.1); }
+    .eye-btn:hover svg.eye-icon { stroke:#fff; }
+    .eye-ring { position:absolute;width:32px;height:32px;border-radius:50%;border:1.5px solid rgba(124,111,255,.4);opacity:0;pointer-events:none; }
+    .eye-ring.ripple { animation:eyeRipple .4s ease-out forwards; }
+
+    /* caps badge */
+    .caps-badge { display:none;align-items:center;gap:5px;font-size:.68rem;font-weight:600;color:#fbbf24;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);border-radius:6px;padding:2px 7px; }
+    .caps-badge.show { display:flex; }
+
+    /* strength meter */
+    .strength-track { height:4px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden;margin:5px 0 3px; }
+    .strength-bar   { height:100%;border-radius:99px;width:0%;transition:width .4s,background .4s; }
+    .strength-dots  { display:flex;gap:5px; }
+    .sdot { width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.1);transition:background .3s,transform .3s; }
+    .sdot.lit { transform:scale(1.15); }
+    .sugg-box { background:rgba(124,111,255,.05);border:1px solid rgba(124,111,255,.13);border-radius:9px;padding:7px 9px;margin-top:5px; }
+    .sugg-item { display:flex;align-items:center;gap:6px;font-size:.74rem;color:var(--muted);padding:2px 0; }
+    .sugg-item i { font-size:.68rem;flex-shrink:0; }
+    .sugg-item.done { color:#10b981; }
+    .match-label { font-size:.73rem;font-weight:600;display:flex;align-items:center;gap:5px; }
+
+    /* forgot-link */
+    .forgot-link { font-size:.76rem;color:var(--muted);text-decoration:none;transition:color .2s; }
+    .forgot-link:hover { color:var(--accent); }
+
+    /* submit btn */
+    .submit-btn { height:46px;border-radius:13px !important;font-size:.92rem;font-weight:700;background:linear-gradient(135deg,#7c6fff,#a855f7) !important;border:none !important;box-shadow:0 4px 20px rgba(124,111,255,.35) !important;transition:all .22s !important;position:relative;overflow:hidden; }
+    .submit-btn:hover { transform:translateY(-2px) !important;box-shadow:0 8px 28px rgba(124,111,255,.55) !important; }
+
+    .auth-divider { border:none;border-top:1px solid rgba(255,255,255,.07);margin:1.1rem 0 .9rem; }
+
+    /* centered auth (forgot/reset/logout) */
+    .auth-center-outer { position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:1rem;z-index:1;overflow-y:auto; }
+    .auth-center-card { width:100%;max-width:460px;background:rgba(10,10,32,.92);border:1px solid rgba(124,111,255,.2);border-radius:24px;padding:2.2rem 2.2rem 1.8rem;box-shadow:0 40px 80px rgba(0,0,0,.6),inset 0 0 0 1px rgba(124,111,255,.08);backdrop-filter:blur(24px);flex-shrink:0; }
+
+    /* dev reset box */
+    .dev-reset-box { background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.25);border-radius:12px;padding:1rem;margin-bottom:1rem; }
+    .dev-reset-box .reset-url { font-size:.72rem;word-break:break-all;color:#67e8f9;font-family:monospace;background:rgba(6,182,212,.1);padding:6px 10px;border-radius:8px;display:block;margin-top:6px; }
+
+    /* ── Keyframes ── */
+    @keyframes orbFloat   { 0%,100%{transform:translateY(0) scale(1);}  50%{transform:translateY(-20px) scale(1.05);} }
+    @keyframes shieldGlow { 0%,100%{transform:scale(1);opacity:.7;}      50%{transform:scale(1.15);opacity:1;} }
+    @keyframes ringRotate { to{transform:rotate(360deg);} }
+    @keyframes barShimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+    @keyframes logoPulse  { 0%,100%{box-shadow:0 0 0 0 rgba(124,111,255,.4);} 50%{box-shadow:0 0 0 8px rgba(124,111,255,0);} }
+    @keyframes eyeRipple  { 0%{transform:scale(.3);opacity:.7;} 100%{transform:scale(1.6);opacity:0;} }
+    @keyframes cardIn     { from{opacity:0;transform:scale(.92) translateY(16px);} to{opacity:1;transform:none;} }
+    @keyframes iconPop    { from{transform:scale(0) rotate(-30deg);} to{transform:scale(1) rotate(0);} }
+
+    /* ── Responsive ── */
+    @media(max-width:768px){ .auth-left{display:none;} .auth-right{width:100%;border-left:none;} }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+{% if current_user.is_authenticated %}
+<nav class="navbar navbar-expand-lg navbar-dark" style="position:relative;z-index:2;">
+  <div class="container">
+    <a class="navbar-brand" href="{{ url_for('dashboard.index') }}">
+      <i class="bi bi-shield-fill-check text-primary me-2"></i>PhishGuard
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('dashboard.index') }}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('scanner.scan') }}"><i class="bi bi-search me-1"></i>Scan URL</a>
+        </li>
+        {% if current_user.is_admin %}
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('admin.index') }}"><i class="bi bi-shield-lock me-1"></i>Admin</a>
+        </li>
+        {% endif %}
+      </ul>
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+            <i class="bi bi-person-circle me-1"></i>{{ current_user.username }}
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end" style="background:#1a1a2e;border-color:#2a2a4a;">
+            <li>
+              <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
+                <i class="bi bi-box-arrow-right me-1"></i>Logout
+              </a>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+{% endif %}
+
+<div class="{% block container_class %}container mt-4{% endblock %}" style="position:relative;z-index:1;">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+{% if current_user.is_authenticated %}
+<!-- ══ ADVANCED BACKGROUND ══ -->
+<style>
+  @keyframes pgOrbFloat{0%,100%{transform:translateY(0) scale(1);}50%{transform:translateY(-40px) scale(1.08);}}
+  @keyframes pgOrbDrift{0%{transform:translate(0,0);}25%{transform:translate(30px,-20px);}50%{transform:translate(-20px,30px);}75%{transform:translate(20px,20px);}100%{transform:translate(0,0);}}
+  .pg-orb{position:absolute;border-radius:50%;pointer-events:none;}
+</style>
+<!-- Orb layer -->
+<div style="position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;">
+  <!-- Large corner orbs -->
+  <div class="pg-orb" style="width:700px;height:700px;top:-200px;left:-200px;
+    background:radial-gradient(circle,rgba(124,111,255,.22) 0%,rgba(124,111,255,.08) 40%,transparent 70%);
+    filter:blur(60px);animation:pgOrbFloat 10s ease-in-out infinite;"></div>
+  <div class="pg-orb" style="width:600px;height:600px;top:20%;right:-180px;
+    background:radial-gradient(circle,rgba(168,85,247,.18) 0%,rgba(168,85,247,.06) 40%,transparent 70%);
+    filter:blur(55px);animation:pgOrbFloat 13s ease-in-out infinite reverse 2s;"></div>
+  <div class="pg-orb" style="width:500px;height:500px;bottom:-150px;left:20%;
+    background:radial-gradient(circle,rgba(6,182,212,.16) 0%,rgba(6,182,212,.05) 40%,transparent 70%);
+    filter:blur(50px);animation:pgOrbFloat 11s ease-in-out infinite 4s;"></div>
+  <div class="pg-orb" style="width:400px;height:400px;bottom:15%;right:5%;
+    background:radial-gradient(circle,rgba(239,68,68,.12) 0%,rgba(239,68,68,.04) 40%,transparent 70%);
+    filter:blur(50px);animation:pgOrbDrift 16s ease-in-out infinite 1s;"></div>
+  <div class="pg-orb" style="width:300px;height:300px;top:50%;left:40%;
+    background:radial-gradient(circle,rgba(16,185,129,.10) 0%,transparent 70%);
+    filter:blur(45px);animation:pgOrbDrift 14s ease-in-out infinite 3s;"></div>
+  <!-- Grid overlay -->
+  <div style="position:absolute;inset:0;
+    background-image:linear-gradient(rgba(124,111,255,.07) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(124,111,255,.07) 1px,transparent 1px);
+    background-size:55px 55px;"></div>
+  <!-- Vignette -->
+  <div style="position:absolute;inset:0;
+    background:radial-gradient(ellipse 100% 100% at 50% 50%,transparent 40%,rgba(7,7,26,.7) 100%);"></div>
+</div>
+<!-- Canvas layer -->
+<canvas id="pgCanvas" style="position:fixed;inset:0;z-index:0;pointer-events:none;"></canvas>
+<script>
+(function(){
+  const c=document.getElementById('pgCanvas');
+  const x=c.getContext('2d');
+  let mouse={x:window.innerWidth/2,y:window.innerHeight/2},mouseActive=false;
+  window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;mouseActive=true;});
+  function resize(){c.width=window.innerWidth;c.height=window.innerHeight;}
+  resize();window.addEventListener('resize',resize);
+
+  /* ── Particle colours ── */
+  const PCOLS=[
+    {r:124,g:111,b:255}, /* violet */
+    {r:168,g:85,b:247},  /* purple */
+    {r:6,g:182,b:212},   /* cyan */
+    {r:16,g:185,b:129},  /* green */
+    {r:245,g:158,b:11},  /* amber */
+    {r:239,g:68,b:68},   /* red */
+    {r:255,g:255,b:255}, /* white */
+  ];
+
+  /* ── Main particles ── */
+  const pts=Array.from({length:90},()=>{
+    const col=PCOLS[Math.floor(Math.random()*PCOLS.length)];
+    return {
+      x:Math.random()*window.innerWidth, y:Math.random()*window.innerHeight,
+      r:Math.random()*2.2+.6,
+      col, a:Math.random()*.55+.15,
+      dx:(Math.random()-.5)*.4, dy:(Math.random()-.5)*.4,
+      p:Math.random()*Math.PI*2, ps:Math.random()*.016+.007
+    };
+  });
+
+  /* ── Network nodes (larger, slower) ── */
+  const nodes=Array.from({length:28},()=>{
+    const col=PCOLS[Math.floor(Math.random()*3)];
+    return {
+      x:Math.random()*window.innerWidth, y:Math.random()*window.innerHeight,
+      r:Math.random()*2.5+1,
+      col, a:Math.random()*.5+.2,
+      dx:(Math.random()-.5)*.22, dy:(Math.random()-.5)*.22,
+      p:Math.random()*Math.PI*2, ps:Math.random()*.009+.004
+    };
+  });
+
+  /* ── Shooting stars ── */
+  const stars=[];
+  function spawnStar(){
+    stars.push({
+      x:Math.random()*window.innerWidth, y:Math.random()*window.innerHeight*0.5,
+      len:Math.random()*120+60, speed:Math.random()*4+3,
+      a:Math.random()*.7+.3, life:1
+    });
+  }
+  setInterval(spawnStar,2800);
+
+  let scanY=0;
+  function draw(){
+    x.clearRect(0,0,c.width,c.height);
+
+    /* mouse spotlight */
+    if(mouseActive){
+      const mg=x.createRadialGradient(mouse.x,mouse.y,0,mouse.x,mouse.y,280);
+      mg.addColorStop(0,'rgba(124,111,255,.12)');mg.addColorStop(.5,'rgba(124,111,255,.04)');mg.addColorStop(1,'transparent');
+      x.fillStyle=mg;x.fillRect(0,0,c.width,c.height);
+    }
+
+    /* ── Network node connections ── */
+    for(let i=0;i<nodes.length;i++) for(let j=i+1;j<nodes.length;j++){
+      const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<200){
+        const alpha=0.18*(1-d/200);
+        const {r,g,b}=nodes[i].col;
+        x.beginPath();x.moveTo(nodes[i].x,nodes[i].y);x.lineTo(nodes[j].x,nodes[j].y);
+        x.strokeStyle=`rgba(${r},${g},${b},${alpha})`;x.lineWidth=.8;x.stroke();
+      }
+    }
+
+    /* ── Network nodes ── */
+    nodes.forEach(p=>{
+      p.p+=p.ps; const a=p.a*(.5+.5*Math.sin(p.p));
+      const {r,g,b}=p.col;
+      /* outer glow */
+      const ng=x.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*8);
+      ng.addColorStop(0,`rgba(${r},${g},${b},${a*.35})`);ng.addColorStop(1,'transparent');
+      x.beginPath();x.arc(p.x,p.y,p.r*8,0,Math.PI*2);x.fillStyle=ng;x.fill();
+      /* core */
+      x.beginPath();x.arc(p.x,p.y,p.r,0,Math.PI*2);
+      x.fillStyle=`rgba(${r},${g},${b},${a})`;x.fill();
+      p.x+=p.dx;p.y+=p.dy;
+      if(p.x<0)p.x=c.width;if(p.x>c.width)p.x=0;
+      if(p.y<0)p.y=c.height;if(p.y>c.height)p.y=0;
+    });
+
+    /* ── Particles ── */
+    pts.forEach(p=>{
+      p.p+=p.ps; const a=p.a*(.5+.5*Math.sin(p.p));
+      const {r,g,b}=p.col;
+      /* halo */
+      x.beginPath();x.arc(p.x,p.y,p.r*5,0,Math.PI*2);
+      x.fillStyle=`rgba(${r},${g},${b},${a*.1})`;x.fill();
+      /* core */
+      x.beginPath();x.arc(p.x,p.y,p.r,0,Math.PI*2);
+      x.fillStyle=`rgba(${r},${g},${b},${a})`;x.fill();
+      p.x+=p.dx;p.y+=p.dy;
+      if(p.x<0)p.x=c.width;if(p.x>c.width)p.x=0;
+      if(p.y<0)p.y=c.height;if(p.y>c.height)p.y=0;
+    });
+
+    /* ── Particle connections ── */
+    for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
+      const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<110){
+        const {r,g,b}=pts[i].col;
+        x.beginPath();x.moveTo(pts[i].x,pts[i].y);x.lineTo(pts[j].x,pts[j].y);
+        x.strokeStyle=`rgba(${r},${g},${b},${0.12*(1-d/110)})`;x.lineWidth=.5;x.stroke();
+      }
+    }
+
+    /* ── Shooting stars ── */
+    for(let i=stars.length-1;i>=0;i--){
+      const s=stars[i];
+      s.x+=s.speed*1.5; s.y+=s.speed*0.5; s.life-=0.018;
+      if(s.life<=0){stars.splice(i,1);continue;}
+      const sg=x.createLinearGradient(s.x,s.y,s.x-s.len,s.y-s.len*0.33);
+      sg.addColorStop(0,`rgba(255,255,255,${s.a*s.life})`);
+      sg.addColorStop(.4,`rgba(124,111,255,${s.a*s.life*.5})`);
+      sg.addColorStop(1,'transparent');
+      x.beginPath();x.moveTo(s.x,s.y);x.lineTo(s.x-s.len,s.y-s.len*0.33);
+      x.strokeStyle=sg;x.lineWidth=1.5;x.stroke();
+    }
+
+    /* ── Horizontal scan line ── */
+    scanY=(scanY+0.6)%(c.height+20);
+    const sl=x.createLinearGradient(0,scanY-12,0,scanY+12);
+    sl.addColorStop(0,'transparent');sl.addColorStop(.5,'rgba(124,111,255,.14)');sl.addColorStop(1,'transparent');
+    x.fillStyle=sl;x.fillRect(0,scanY-12,c.width,24);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+{% endif %}
+
+<script>
+/* ── Shared helpers ── */
+function togglePass(id, btn) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+  if (btn) {
+    btn.classList.toggle('eye-active');
+    const ring = btn.querySelector('.eye-ring');
+    if (ring) { ring.classList.remove('ripple'); void ring.offsetWidth; ring.classList.add('ripple'); }
+  }
+}
+
+function handleCaps(e, id) {
+  document.getElementById(id).classList.toggle('show', !!(e.getModifierState && e.getModifierState('CapsLock')));
+}
+
+const STRENGTH_LEVELS = [
+  {pct:'14%',color:'#ef4444',label:'Very Weak'},
+  {pct:'28%',color:'#f97316',label:'Weak'},
+  {pct:'50%',color:'#f59e0b',label:'Fair'},
+  {pct:'68%',color:'#84cc16',label:'Good'},
+  {pct:'84%',color:'#10b981',label:'Strong'},
+  {pct:'100%',color:'#06b6d4',label:'Very Strong'},
+];
+const STRENGTH_RULES = [
+  {id:'sg-len',  test:v=>v.length>=8},
+  {id:'sg-upper',test:v=>/[A-Z]/.test(v)},
+  {id:'sg-lower',test:v=>/[a-z]/.test(v)},
+  {id:'sg-num',  test:v=>/[0-9]/.test(v)},
+  {id:'sg-sym',  test:v=>/[^A-Za-z0-9]/.test(v)},
+];
+
+function evalStrength(val, pwdId, confirmId) {
+  const wrap = document.getElementById('strengthWrap');
+  const bar  = document.getElementById('strengthBar');
+  const lbl  = document.getElementById('strengthLabel');
+  const sugg = document.getElementById('suggBox');
+  if (!val) { if(wrap) wrap.style.display='none'; if(sugg) sugg.style.display='none'; return; }
+  if (wrap) wrap.style.display='block';
+  if (sugg) sugg.style.display='block';
+  let score = 0;
+  STRENGTH_RULES.forEach((r, i) => {
+    const ok = r.test(val); if (ok) score++;
+    const el = document.getElementById(r.id);
+    if (el) { el.classList.toggle('done', ok); el.querySelector('i').className = ok ? 'bi bi-check-circle-fill' : 'bi bi-circle'; }
+    if (val.length >= 12 && i === 0) score++;
+  });
+  const lv = STRENGTH_LEVELS[Math.min(score, 5)];
+  if (bar) { bar.style.width = lv.pct; bar.style.background = lv.color; }
+  if (lbl) { lbl.textContent = lv.label; lbl.style.color = lv.color; }
+  for (let i = 0; i < 6; i++) {
+    const d = document.getElementById('d' + i);
+    if (d) { if (i <= Math.min(score,5)) { d.style.background=lv.color; d.classList.add('lit'); } else { d.style.background='rgba(255,255,255,.1)'; d.classList.remove('lit'); } }
+  }
+  if (confirmId) checkMatch(pwdId, confirmId);
+}
+
+function checkMatch(pwdId, confirmId) {
+  const p  = document.getElementById(pwdId)?.value;
+  const c  = document.getElementById(confirmId)?.value;
+  const ml = document.getElementById('matchLabel');
+  if (!ml || !c) { if(ml) ml.innerHTML=''; return; }
+  ml.innerHTML = p === c
+    ? '<i class="bi bi-check-circle-fill" style="color:#10b981;"></i><span style="color:#10b981;">Match</span>'
+    : '<i class="bi bi-x-circle-fill" style="color:#ef4444;"></i><span style="color:#ef4444;">No match</span>';
+}
+</script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

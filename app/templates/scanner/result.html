@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}Scan Result — PhishGuard AI{% endblock %}
+{% block extra_head %}{% endblock %}
+
+{% block content %}
+
+{% set is_safe      = scan.prediction == 'Safe' %}
+{% set is_susp      = scan.prediction == 'Suspicious' %}
+{% set color_hex    = '#10b981' if is_safe else ('#f59e0b' if is_susp else '#ef4444') %}
+{% set color_name   = 'success' if is_safe else ('warning' if is_susp else 'danger') %}
+{% set icon_cls     = 'bi-shield-fill-check' if is_safe else ('bi-exclamation-triangle-fill' if is_susp else 'bi-bug-fill') %}
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h4 class="fw-bold mb-0" style="font-family:'Space Grotesk',sans-serif;">Scan Result</h4>
+    <p class="mb-0" style="font-size:0.82rem;color:var(--text-muted);">
+      {{ scan.scanned_at.strftime('%d %B %Y at %H:%M UTC') }}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('scanner.scan') }}" class="btn btn-outline-secondary btn-sm" style="border-radius:10px;">
+      <i class="bi bi-arrow-left me-1"></i>New Scan
+    </a>
+    <a href="{{ url_for('scanner.download_report', scan_id=scan.id) }}" class="btn btn-sm fw-semibold"
+       style="border-radius:10px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;">
+      <i class="bi bi-file-earmark-pdf me-1"></i>PDF Report
+    </a>
+  </div>
+</div>
+
+<!-- ── Verdict Banner ── -->
+<div class="card mb-4" style="border-color:{{ color_hex }}40;background:{{ color_hex }}08;">
+  <div class="card-body p-4">
+    <div class="row align-items-center g-3">
+      <div class="col-auto">
+        <div style="width:72px;height:72px;border-radius:20px;background:{{ color_hex }}15;
+                    border:1px solid {{ color_hex }}40;
+                    display:flex;align-items:center;justify-content:center;">
+          <i class="bi {{ icon_cls }}" style="font-size:2.2rem;color:{{ color_hex }};"></i>
+        </div>
+      </div>
+      <div class="col">
+        <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">
+          AI Verdict
+        </div>
+        <div style="font-size:1.8rem;font-weight:800;color:{{ color_hex }};font-family:'Space Grotesk',sans-serif;line-height:1.1;">
+          {{ scan.prediction }}
+        </div>
+        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:4px;word-break:break-all;">
+          {{ scan.url }}
+        </div>
+      </div>
+      <div class="col-auto text-center d-none d-md-block" style="border-left:1px solid {{ color_hex }}20;padding-left:1.5rem;">
+        <div style="font-size:2rem;font-weight:800;color:{{ color_hex }};font-family:'Space Grotesk',sans-serif;">
+          {{ scan.confidence }}%
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);">Confidence</div>
+      </div>
+      <div class="col-auto text-center d-none d-md-block" style="border-left:1px solid {{ color_hex }}20;padding-left:1.5rem;">
+        <div style="font-size:2rem;font-weight:800;color:{{ color_hex }};font-family:'Space Grotesk',sans-serif;">
+          {{ scan.risk_score }}
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);">Risk / 100</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- ── Risk Gauge ── -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-speedometer2" style="color:var(--accent);"></i>
+        Risk Gauge
+      </div>
+      <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
+        <canvas id="gaugeChart" width="220" height="220"></canvas>
+        <div class="mt-3 text-center">
+          <div style="font-size:0.78rem;color:var(--text-muted);">
+            {% if scan.risk_score < 30 %}Low Risk
+            {% elif scan.risk_score < 60 %}Moderate Risk
+            {% else %}High Risk{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Features Table ── -->
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-list-check" style="color:var(--accent);"></i>
+        Extracted Features
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr><th>Feature</th><th>Value</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              {% if scan.features %}
+                {% set feat = scan.features %}
+                {% set rows = [
+                  ('URL Length',          feat.get('url_length','-'),          feat.get('url_length',0) < 75),
+                  ('HTTPS',               feat.get('has_https','-'),            feat.get('has_https',0) == 1),
+                  ('IP as Domain',        feat.get('has_ip','-'),               feat.get('has_ip',0) == 0),
+                  ('Subdomain Count',     feat.get('subdomain_count','-'),      feat.get('subdomain_count',0) <= 1),
+                  ('Special Characters',  feat.get('special_char_count','-'),   feat.get('special_char_count',0) < 3),
+                  ('Suspicious Keywords', feat.get('suspicious_keywords','-'),  feat.get('suspicious_keywords',0) < 2),
+                  ('Dot Count',           feat.get('dot_count','-'),            feat.get('dot_count',0) < 5),
+                  ('@ in URL',            feat.get('has_at_symbol','-'),        feat.get('has_at_symbol',0) == 0),
+                  ('Domain Age (days)',   feat.get('domain_age_days','-'),      feat.get('domain_age_days',-1) > 180),
+                  ('SSL Valid',           feat.get('ssl_valid','-'),            feat.get('ssl_valid',0) == 1),
+                  ('Login Form',          feat.get('has_login_form','-'),       feat.get('has_login_form',0) == 0),
+                  ('External Links',      feat.get('external_links','-'),       feat.get('external_links',0) < 20),
+                  ('Hidden Elements',     feat.get('hidden_elements','-'),      feat.get('hidden_elements',0) == 0),
+                  ('Redirect Count',      feat.get('redirect_count','-'),       feat.get('redirect_count',0) < 2),
+                  ('Suspicious JS',       feat.get('has_suspicious_js','-'),    feat.get('has_suspicious_js',0) == 0),
+                ] %}
+                {% for name, value, safe in rows %}
+                <tr>
+                  <td style="font-size:0.875rem;">{{ name }}</td>
+                  <td><code>{{ value }}</code></td>
+                  <td>
+                    {% if safe %}
+                      <span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.25);">
+                        <i class="bi bi-check-lg me-1"></i>OK
+                      </span>
+                    {% else %}
+                      <span class="badge" style="background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.25);">
+                        <i class="bi bi-x-lg me-1"></i>Risk
+                      </span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Recommendations ── -->
+<div class="card mt-4">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-lightbulb-fill" style="color:#f59e0b;"></i>
+    Security Recommendations
+  </div>
+  <div class="card-body">
+    {% if scan.prediction == 'Phishing' %}
+      <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-x-circle-fill fs-5"></i>
+        <strong>DO NOT visit or interact with this website.</strong>
+      </div>
+      <ul class="mb-0" style="color:var(--text-muted);font-size:0.875rem;line-height:2;">
+        <li>Report this URL to Google Safe Browsing and your ISP immediately.</li>
+        <li>If you entered any credentials, change them right away.</li>
+        <li>Run a malware scan on your device.</li>
+        <li>Enable two-factor authentication on important accounts.</li>
+      </ul>
+    {% elif scan.prediction == 'Suspicious' %}
+      <div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <strong>Exercise caution when visiting this site.</strong>
+      </div>
+      <ul class="mb-0" style="color:var(--text-muted);font-size:0.875rem;line-height:2;">
+        <li>Do not enter passwords, credit card details, or personal information.</li>
+        <li>Verify the site's legitimacy through official channels before proceeding.</li>
+        <li>Check the domain spelling carefully — phishers often use lookalike domains.</li>
+      </ul>
+    {% else %}
+      <div class="alert alert-success d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-shield-fill-check fs-5"></i>
+        <strong>This site appears safe based on current analysis.</strong>
+      </div>
+      <ul class="mb-0" style="color:var(--text-muted);font-size:0.875rem;line-height:2;">
+        <li>Always verify the domain before entering sensitive credentials.</li>
+        <li>Keep your browser and antivirus software up to date.</li>
+        <li>AI analysis is not 100% foolproof — stay vigilant.</li>
+      </ul>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+Chart.defaults.color = '#7a7a9a';
+const risk  = {{ scan.risk_score }};
+const color = risk < 30 ? '#10b981' : risk < 60 ? '#f59e0b' : '#ef4444';
+const track = 'rgba(255,255,255,0.06)';
+
+new Chart(document.getElementById('gaugeChart'), {
+  type: 'doughnut',
+  data: {
+    datasets: [{
+      data: [risk, 100 - risk],
+      backgroundColor: [color, track],
+      borderWidth: 0,
+      hoverOffset: 0
+    }]
+  },
+  options: {
+    cutout: '74%',
+    rotation: -90,
+    circumference: 180,
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: false }
+    }
+  },
+  plugins: [{
+    id: 'centerText',
+    afterDraw(chart) {
+      const { ctx, chartArea: { width, top, height } } = chart;
+      ctx.save();
+      ctx.font = "bold 2.2rem 'Space Grotesk', sans-serif";
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.fillText(risk, width / 2, top + height * 0.78);
+      ctx.font = "0.78rem 'Inter', sans-serif";
+      ctx.fillStyle = '#7a7a9a';
+      ctx.fillText('Risk Score', width / 2, top + height * 0.94);
+      ctx.restore();
+    }
+  }]
+});
+</script>
+{% endblock %}
