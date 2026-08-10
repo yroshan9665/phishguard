@@ -1,1 +1,1 @@
-web: gunicorn run:app
+web: python seed_admin.py && gunicorn run:app

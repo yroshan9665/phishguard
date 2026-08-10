@@ -33,3 +33,15 @@ class ScanResult(db.Model):
     risk_score  = db.Column(db.Integer, nullable=False)
     features    = db.Column(db.JSON, default=dict)
     scanned_at  = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class LoginLog(db.Model):
+    __tablename__ = 'login_logs'
+
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    ip_address = db.Column(db.String(45))
+    status     = db.Column(db.String(10), default='success')  # success / failed
+    logged_at  = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='login_logs', foreign_keys=[user_id])

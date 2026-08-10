@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db, bcrypt
-from app.models import User
+from app.models import User, LoginLog
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -58,11 +58,22 @@ def login():
     if request.method == 'POST':
         email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
-        user     = User.query.filter_by(email=email).first()
+        user     = User.query.filter_by(email=email, is_admin=False).first()
         if user and bcrypt.check_password_hash(user.password, password):
             login_user(user, remember=bool(request.form.get('remember')))
+            db.session.add(LoginLog(user_id=user.id, ip_address=request.remote_addr, status='success'))
+            db.session.commit()
             flash(f'Welcome back, {user.username}!', 'success')
-            return redirect(request.args.get('next') or url_for('dashboard.index'))
+            return redirect(url_for('dashboard.index'))
+        # check if it's an admin trying to use user login
+        admin_user = User.query.filter_by(email=email, is_admin=True).first()
+        if admin_user and bcrypt.check_password_hash(admin_user.password, password):
+            flash('Admin accounts must use the Admin Login portal.', 'warning')
+            return redirect(url_for('admin.admin_login'))
+        if user or admin_user:
+            u = user or admin_user
+            db.session.add(LoginLog(user_id=u.id, ip_address=request.remote_addr, status='failed'))
+            db.session.commit()
         flash('Invalid email or password.', 'danger')
         return redirect(url_for('auth.login'))
     return render_template('auth/login.html')

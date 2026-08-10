@@ -112,7 +112,6 @@
     padding: 0 0 1.6rem;
     box-shadow: 0 32px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(124,111,255,.06) inset;
     backdrop-filter: blur(28px);
-    overflow: hidden;
   }
 
   /* top accent line */
@@ -144,6 +143,11 @@
   }
   .card-sub span {
     background: linear-gradient(90deg, #a78bfa, #06b6d4);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    font-weight: 700;
+  }
+  .admin-mode .card-sub span {
+    background: linear-gradient(90deg, #ef4444, #f97316);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     font-weight: 700;
   }
@@ -209,7 +213,7 @@
     box-shadow: 0 6px 28px rgba(124,111,255,.5);
     transition: transform .22s, box-shadow .22s;
     display: flex; align-items: center; justify-content: center; gap: 8px;
-    margin-bottom: 1.4rem;
+    margin-bottom: .75rem;
   }
   .signin-btn:hover {
     transform: translateY(-2px);
@@ -234,7 +238,74 @@
   }
   .sec-item i { color: rgba(124,111,255,.4); }
 
-  /* keyframes */
+  /* tab switcher */
+  .tab-switch {
+    display: flex; background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px; padding: 4px; margin-bottom: 1.4rem; gap: 4px;
+  }
+  .tab-btn {
+    flex: 1; height: 36px; border: none; border-radius: 9px;
+    font-size: .82rem; font-weight: 700; cursor: pointer;
+    background: transparent; color: rgba(255,255,255,.35);
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: all .22s;
+  }
+  .tab-btn.active {
+    background: rgba(124,111,255,.18);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(124,111,255,.2);
+  }
+  .tab-btn.admin-tab.active {
+    background: rgba(239,68,68,.18);
+    box-shadow: 0 2px 12px rgba(239,68,68,.2);
+  }
+
+  /* admin toggle button */
+  .admin-toggle-btn {
+    width: 100%; height: 46px; border-radius: 13px;
+    font-size: .88rem; font-weight: 700;
+    background: transparent;
+    border: 1.5px solid rgba(239,68,68,.4);
+    color: #ef4444;
+    cursor: pointer; transition: all .22s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-bottom: 1.2rem;
+  }
+  .admin-toggle-btn:hover {
+    background: rgba(239,68,68,.08);
+    border-color: rgba(239,68,68,.7);
+    transform: translateY(-1px);
+  }
+  .admin-mode .admin-toggle-btn {
+    border-color: rgba(124,111,255,.4);
+    color: #a78bfa;
+  }
+  .admin-mode .admin-toggle-btn:hover {
+    background: rgba(124,111,255,.08);
+    border-color: rgba(124,111,255,.7);
+  }
+
+  /* admin mode overrides */
+  .admin-mode .card-line  { background: linear-gradient(90deg,#ef4444,#dc2626,#7c6fff); }
+  .admin-mode .card-logo  { background: linear-gradient(135deg,#ef4444,#dc2626 55%,#7c6fff); box-shadow: 0 8px 32px rgba(239,68,68,.45); }
+  .admin-mode .f-wrap:focus-within { border-color: rgba(239,68,68,.55); box-shadow: 0 0 0 3px rgba(239,68,68,.1); background: rgba(239,68,68,.04); }
+  .admin-mode .f-icon { color: rgba(239,68,68,.7); }
+  .admin-mode .eye-tog { color: rgba(239,68,68,.5); }
+  .admin-mode .signin-btn { background: linear-gradient(135deg,#ef4444,#dc2626 60%,#7c6fff); box-shadow: 0 6px 28px rgba(239,68,68,.4); }
+  .admin-mode .signin-btn:hover { box-shadow: 0 12px 36px rgba(239,68,68,.6); }
+  .admin-mode .login-card { border-color: rgba(239,68,68,.22); }
+  .admin-mode .admin-badge { display: flex !important; }
+
+  /* admin badge (hidden by default) */
+  .admin-badge {
+    display: none;
+    align-items: center; justify-content: center; gap: 8px;
+    background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2);
+    border-radius: 10px; padding: .4rem 1rem; margin-bottom: 1rem;
+    font-size: .72rem; font-weight: 700; letter-spacing: .8px;
+    text-transform: uppercase; color: #ef4444;
+  }
   @keyframes glowPulse { 0%,100%{opacity:.7;transform:scale(1);} 50%{opacity:1;transform:scale(1.08);} }
   @keyframes ringCW   { to { transform: rotate(360deg); } }
   @keyframes ringCCW  { to { transform: rotate(-360deg); } }
@@ -301,6 +372,10 @@
       <div class="card-line"></div>
       <div class="card-body-inner">
 
+        <div class="admin-badge">
+          <i class="bi bi-shield-lock-fill"></i> Restricted — Admin Access Only
+        </div>
+
         <!-- Logo -->
         <div class="card-logo">
           <svg viewBox="0 0 24 24" width="30" height="30" fill="white">
@@ -352,6 +427,10 @@
             <i class="bi bi-box-arrow-in-right"></i>Sign In
           </button>
         </form>
+
+        <a href="{{ url_for('admin.admin_login') }}" class="admin-toggle-btn">
+          <i class="bi bi-shield-lock-fill"></i>Admin Login
+        </a>
 
         <div class="card-footer-row">
           Don't have an account?

@@ -2,24 +2,52 @@ from functools import wraps
 from io import BytesIO
 from datetime import datetime
 
-from flask import Blueprint, render_template, redirect, url_for, flash, jsonify, send_file
-from flask_login import login_required, current_user
+from flask import Blueprint, render_template, redirect, url_for, flash, jsonify, send_file, request
+from flask_login import login_required, current_user, login_user
 from sqlalchemy import func
-from app import db
-from app.models import User, ScanResult
+from app import db, bcrypt
+from app.models import User, ScanResult, LoginLog
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 
 def admin_required(f):
     @wraps(f)
-    @login_required
     def decorated(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for('admin.admin_login'))
         if not current_user.is_admin:
             flash('Admin access required.', 'danger')
             return redirect(url_for('dashboard.index'))
         return f(*args, **kwargs)
     return decorated
+
+
+@admin_bp.route('/login', methods=['GET', 'POST'])
+def admin_login():
+    # If a regular user is logged in, send them to their dashboard
+    if current_user.is_authenticated:
+        if current_user.is_admin:
+            return redirect(url_for('admin.index'))
+        return redirect(url_for('dashboard.index'))
+    if request.method == 'POST':
+        email    = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        user     = User.query.filter_by(email=email, is_admin=True).first()
+        if user and bcrypt.check_password_hash(user.password, password):
+            login_user(user)
+            db.session.add(LoginLog(user_id=user.id, ip_address=request.remote_addr, status='success'))
+            db.session.commit()
+            flash(f'Welcome, {user.username}. Admin access granted.', 'success')
+            return redirect(url_for('admin.index'))
+        # log failed attempt if user exists but wrong role/password
+        non_admin = User.query.filter_by(email=email).first()
+        if non_admin:
+            db.session.add(LoginLog(user_id=non_admin.id, ip_address=request.remote_addr, status='failed'))
+            db.session.commit()
+        flash('Invalid credentials or not an admin account.', 'danger')
+        return redirect(url_for('admin.admin_login'))
+    return render_template('admin/login.html')
 
 
 @admin_bp.route('/')
@@ -33,6 +61,9 @@ def index():
     recent_scans = (ScanResult.query
                     .order_by(ScanResult.scanned_at.desc())
                     .limit(20).all())
+    login_logs = (LoginLog.query
+                  .order_by(LoginLog.logged_at.desc())
+                  .limit(30).all())
     stats = {
         'total_users':      len(users),
         'total_scans':      total_scans,
@@ -41,7 +72,7 @@ def index():
         'suspicious_count': suspicious_count,
     }
     return render_template('admin/index.html', users=users,
-                           recent_scans=recent_scans, stats=stats)
+                           recent_scans=recent_scans, login_logs=login_logs, stats=stats)
 
 
 @admin_bp.route('/export/excel')
@@ -184,19 +215,39 @@ def delete_user(user_id):
 @admin_bp.route('/api/chart-data')
 @admin_required
 def chart_data():
+    from datetime import timedelta
     dist = (db.session.query(ScanResult.prediction, func.count(ScanResult.id))
             .group_by(ScanResult.prediction).all())
     dist_dict = {row[0]: row[1] for row in dist}
 
-    top_users = (db.session.query(ScanResult.user_id, func.count(ScanResult.id).label('cnt'))
-                 .group_by(ScanResult.user_id)
-                 .order_by(func.count(ScanResult.id).desc())
-                 .limit(5).all())
-    labels, data = [], []
-    for row in top_users:
+    top_users_q = (db.session.query(ScanResult.user_id, func.count(ScanResult.id).label('cnt'))
+                   .group_by(ScanResult.user_id)
+                   .order_by(func.count(ScanResult.id).desc())
+                   .limit(7).all())
+    labels, totals, safe_d, susp_d, phish_d = [], [], [], [], []
+    for row in top_users_q:
         u = User.query.get(row[0])
-        labels.append(u.username if u else str(row[0]))
-        data.append(row[1])
+        if not u:
+            continue
+        labels.append(u.username)
+        totals.append(row[1])
+        safe_d.append(ScanResult.query.filter_by(user_id=row[0], prediction='Safe').count())
+        susp_d.append(ScanResult.query.filter_by(user_id=row[0], prediction='Suspicious').count())
+        phish_d.append(ScanResult.query.filter_by(user_id=row[0], prediction='Phishing').count())
+
+    # 7-day global scan trend
+    today = datetime.utcnow().date()
+    trend_labels, trend_data = [], []
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+        day_start = datetime(day.year, day.month, day.day)
+        day_end   = day_start + timedelta(days=1)
+        cnt = ScanResult.query.filter(
+            ScanResult.scanned_at >= day_start,
+            ScanResult.scanned_at < day_end
+        ).count()
+        trend_labels.append(day.strftime('%a'))
+        trend_data.append(cnt)
 
     return jsonify({
         'distribution': {
@@ -205,5 +256,12 @@ def chart_data():
                      dist_dict.get('Suspicious', 0),
                      dist_dict.get('Phishing', 0)],
         },
-        'top_users': {'labels': labels, 'data': data}
+        'top_users': {
+            'labels': labels,
+            'data':   totals,
+            'safe':   safe_d,
+            'suspicious': susp_d,
+            'phishing':   phish_d,
+        },
+        'scan_trend': {'labels': trend_labels, 'data': trend_data},
     })
