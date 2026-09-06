@@ -1,227 +1,412 @@
 {% extends "base.html" %}
-{% block title %}Dashboard — PhishGuard AI{% endblock %}
+{% block title %}Security Dashboard — Phishgaurd AI{% endblock %}
+
 {% block extra_head %}
 <style>
-  .stat-card {
-    border-radius:20px; position:relative; overflow:hidden;
-    transition:transform .25s,box-shadow .3s; cursor:default;
-    border:1px solid rgba(255,255,255,.12) !important;
+  .dash-hero-title {
+    font-size: 1.65rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
   }
-  .stat-card::before {
-    content:''; position:absolute; inset:0;
-    background:linear-gradient(135deg,rgba(255,255,255,.12) 0%,transparent 55%);
-    pointer-events:none;
+  .threat-ticker-bar {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 14px;
+    padding: 0.55rem 1rem;
+    margin-bottom: 1.35rem;
+    display: flex; align-items: center; gap: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
   }
-  .stat-card::after {
-    content:''; position:absolute; top:-40%; right:-15%;
-    width:150px; height:150px; border-radius:50%;
-    background:rgba(255,255,255,.1); pointer-events:none;
+  .threat-badge {
+    background: var(--status-phishing-bg);
+    color: var(--status-phishing);
+    border: 1px solid var(--status-phishing-border);
+    font-size: 0.68rem; font-weight: 800;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.25em 0.75em; border-radius: 6px;
+    white-space: nowrap; flex-shrink: 0;
   }
-  .stat-card:hover { transform:translateY(-8px) scale(1.03); }
-  .stat-card.total    { background:linear-gradient(135deg,#5b21b6,#7c6fff); box-shadow:0 8px 32px rgba(124,111,255,.5); }
-  .stat-card.phishing { background:linear-gradient(135deg,#991b1b,#ef4444); box-shadow:0 8px 32px rgba(239,68,68,.5); }
-  .stat-card.suspicious { background:linear-gradient(135deg,#92400e,#f59e0b); box-shadow:0 8px 32px rgba(245,158,11,.4); }
-  .stat-card.safe     { background:linear-gradient(135deg,#065f46,#10b981); box-shadow:0 8px 32px rgba(16,185,129,.4); }
-  .stat-card:hover.total    { box-shadow:0 20px 50px rgba(124,111,255,.7); }
-  .stat-card:hover.phishing { box-shadow:0 20px 50px rgba(239,68,68,.7); }
-  .stat-card:hover.suspicious { box-shadow:0 20px 50px rgba(245,158,11,.6); }
-  .stat-card:hover.safe     { box-shadow:0 20px 50px rgba(16,185,129,.6); }
-  .stat-num {
-    font-size:2.8rem; font-weight:900; line-height:1;
-    background:linear-gradient(135deg,#fff 30%,rgba(255,255,255,.6));
-    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  .ticker-content {
+    display: flex; gap: 3rem; white-space: nowrap;
+    animation: tickerLoop 32s linear infinite;
+    font-size: 0.82rem; color: var(--text-secondary);
   }
-  .pulse-dot { width:8px;height:8px;border-radius:50%;background:#10b981;position:relative;display:inline-block; }
-  .pulse-dot::after { content:'';position:absolute;inset:-3px;border-radius:50%;border:1.5px solid #10b981;animation:pulseDot 1.8s ease-out infinite; }
-  @keyframes pulseDot{0%{transform:scale(1);opacity:.8;}100%{transform:scale(2.4);opacity:0;}}
-  .sec-label { font-size:.72rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem; }
-  .url-bar-wrap {
-    display:flex;align-items:stretch;
-    background:rgba(124,111,255,.08);
-    border:1.5px solid rgba(124,111,255,.4);
-    border-radius:14px;overflow:hidden;transition:all .2s;
+  .ticker-content:hover { animation-play-state: paused; }
+  @keyframes tickerLoop { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+  .stat-card-saas {
+    position: relative;
+    overflow: hidden;
   }
-  .url-bar-wrap:focus-within { border-color:#7c6fff; box-shadow:0 0 0 4px rgba(124,111,255,.25),0 0 50px rgba(124,111,255,.15); }
-  .url-bar-proto { background:rgba(124,111,255,.2);color:#a78bfa;font-size:.82rem;font-weight:700;padding:0 16px;display:flex;align-items:center;gap:6px;border-right:1px solid rgba(124,111,255,.3);white-space:nowrap;flex-shrink:0; }
-  .url-bar-input { flex:1;background:transparent;border:none;outline:none;color:#e0e0e0;font-size:.9rem;padding:0 14px;height:52px; }
-  .url-bar-input::placeholder { color:rgba(160,160,200,.4); }
-  .url-scan-btn { background:linear-gradient(135deg,#7c6fff,#a855f7);border:none;color:#fff;font-weight:700;font-size:.9rem;padding:0 28px;cursor:pointer;white-space:nowrap;transition:all .2s;display:flex;align-items:center;gap:8px;position:relative;overflow:hidden; }
-  .url-scan-btn:hover { background:linear-gradient(135deg,#6d5ff0,#9333ea);box-shadow:inset 0 0 20px rgba(255,255,255,.15); }
-  .chart-card { border-radius:18px;overflow:hidden; }
-  .scan-table td { padding:.75rem 1rem;font-size:.855rem; }
-  .scan-table th { padding:.6rem 1rem;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted); }
-  .url-cell { max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-  .progress { background:rgba(255,255,255,.07);border-radius:99px; }
-  .card { transition:border-color .2s,box-shadow .2s; }
-  .card:hover { border-color:rgba(124,111,255,.35) !important; box-shadow:0 8px 40px rgba(0,0,0,.4); }
-  #liveClock { font-size:.82rem;font-weight:600;color:var(--muted);letter-spacing:.5px; }
+  .stat-card-saas::before {
+    content: '';
+    position: absolute; top: 0; right: 0; width: 80px; height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 229, 255, 0.08), transparent 70%);
+    pointer-events: none;
+  }
+  [data-theme="light"] .stat-card-saas::before {
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.08), transparent 70%);
+  }
+
+  .scan-table td, .scan-table th {
+    vertical-align: middle;
+  }
+  .url-truncate {
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.825rem;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="page-header flex-wrap gap-2">
+<!-- ══ DASHBOARD HEADER ══ -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 fade-in">
   <div>
-    <h4 class="fw-bold mb-0" style="font-size:1.6rem;letter-spacing:-.3px;">
-      <i class="bi bi-speedometer2 me-2" style="color:#7c6fff;filter:drop-shadow(0 0 10px rgba(124,111,255,.9));"></i>
-      <span style="background:linear-gradient(90deg,#a78bfa,#7c6fff,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Dashboard</span>
-    </h4>
-    <p class="mb-0 mt-1" style="font-size:.82rem;color:var(--muted);">
-      Welcome back, <strong style="color:#c4b5fd;">{{ current_user.username }}</strong>
-      &nbsp;·&nbsp;<span class="pulse-dot me-1"></span><span id="liveClock"></span>
-    </p>
+    <h1 class="dash-hero-title mb-1">
+      <span style="background: linear-gradient(135deg, var(--header-grad-1), var(--header-grad-2), var(--header-grad-3)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+        Security Dashboard
+      </span>
+    </h1>
+    <div class="d-flex align-items-center gap-2" style="font-size: 0.85rem; color: var(--text-secondary);">
+      <span>Welcome back, <strong style="color: var(--text-primary);">{{ current_user.username }}</strong></span>
+      <span>&middot;</span>
+      <span class="live-indicator me-1"></span>
+      <span id="liveClock" style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;"></span>
+    </div>
   </div>
-  <a href="{{ url_for('scanner.scan') }}" class="btn px-4"
-     style="border-radius:12px;font-size:.9rem;font-weight:700;height:44px;display:flex;align-items:center;
-            background:linear-gradient(135deg,#7c6fff,#a855f7);border:none;
-            box-shadow:0 6px 28px rgba(124,111,255,.6),inset 0 1px 0 rgba(255,255,255,.15);">
-    <i class="bi bi-plus-circle me-2"></i>New Scan
-  </a>
+  <div>
+    <a href="{{ url_for('scanner.scan') }}" class="btn btn-cyber-primary px-4 py-2">
+      <i class="bi bi-plus-lg me-1"></i>New Scan
+    </a>
+  </div>
 </div>
 
-<!-- Quick Scan -->
-<div class="card mb-4" style="border:1.5px solid rgba(124,111,255,.3) !important;background:rgba(12,10,35,.9);">
-  <div class="card-body p-3">
-    <div class="sec-label"><i class="bi bi-lightning-fill me-1" style="color:#f59e0b;filter:drop-shadow(0 0 6px rgba(245,158,11,.7));"></i>Quick Scan</div>
-    <form method="POST" action="{{ url_for('scanner.scan') }}" id="quickForm">
+<!-- ══ LIVE THREAT INTEL TICKER ══ -->
+<div class="threat-ticker-bar fade-in">
+  <span class="threat-badge"><i class="bi bi-broadcast me-1"></i>Live Threat Feed</span>
+  <div style="overflow: hidden; flex: 1;">
+    <div id="threatTicker" class="ticker-content"></div>
+  </div>
+</div>
+
+<!-- ══ QUICK SCAN BAR ══ -->
+<div class="card mb-4 fade-in">
+  <div class="card-body p-3 p-lg-4">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <label class="form-label mb-0 fw-bold d-flex align-items-center gap-2">
+        <i class="bi bi-lightning-charge-fill text-warning"></i>
+        <span>Instant URL Analysis</span>
+      </label>
+      <span class="badge" style="background: var(--bg-card-subtle); color: var(--text-secondary); border: 1px solid var(--border-subtle); font-size: 0.7rem; font-family: 'JetBrains Mono', monospace;">
+        Ctrl + K
+      </span>
+    </div>
+    <form method="POST" action="{{ url_for('scanner.scan') }}" id="quickScanForm">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-      <div class="url-bar-wrap">
-        <div class="url-bar-proto"><i class="bi bi-shield-shaded"></i> URL</div>
-        <input type="text" name="url" class="url-bar-input" placeholder="Paste any URL — e.g. https://suspicious-site.com" autocomplete="off" required/>
-        <button type="submit" class="url-scan-btn" id="quickBtn">
-          <span id="qBtnText"><i class="bi bi-search"></i> Analyse</span>
-          <span id="qBtnSpin" class="d-none"><span class="spinner-border spinner-border-sm"></span> Scanning…</span>
+      <div class="url-bar-container">
+        <div class="url-prefix-badge">
+          <i class="bi bi-shield-lock-fill"></i>
+          <span>TARGET</span>
+        </div>
+        <input type="text" name="url" id="urlInput" class="url-main-input"
+               placeholder="Enter URL to inspect (e.g. https://example-secure-login.com)..."
+               autocomplete="off" required/>
+        <button type="submit" class="url-submit-btn" id="quickScanBtn">
+          <span id="qBtnText"><i class="bi bi-search me-1"></i> Inspect URL</span>
+          <span id="qBtnSpin" class="d-none"><span class="spinner-border spinner-border-sm me-1"></span> Analyzing...</span>
         </button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- Stat Cards -->
-<div class="row g-3 mb-4">
-  {% for label,value,icon,cls,tag in [
-    ('Total Scans', stats.total,      'bi-bar-chart-line-fill','total',    'All Time'),
-    ('Phishing',    stats.phishing,   'bi-bug-fill',           'phishing', 'High Risk'),
-    ('Suspicious',  stats.suspicious, 'bi-exclamation-triangle-fill','suspicious','Medium'),
-    ('Safe',        stats.safe,       'bi-shield-fill-check',  'safe',     'Clean'),
-  ] %}
+<!-- ══ METRIC STAT CARDS ══ -->
+<div class="row g-3 mb-4 fade-in">
+  <!-- Total Scans -->
   <div class="col-6 col-lg-3">
-    <div class="card stat-card {{ cls }} p-3 h-100">
-      <div class="d-flex justify-content-between align-items-start mb-3">
-        <div style="width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.3);">
-          <i class="bi {{ icon }}" style="font-size:1.3rem;color:#fff;"></i>
+    <div class="stat-card-saas total-card h-100">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="stat-icon-box" style="background: rgba(37, 99, 235, 0.12); color: var(--accent-blue);">
+          <i class="bi bi-bar-chart-line-fill"></i>
         </div>
-        <span style="background:rgba(255,255,255,.2);color:#fff;font-size:.7rem;font-weight:700;padding:.3em .85em;border-radius:8px;">{{ tag }}</span>
+        <span class="badge" style="background: var(--bg-card-subtle); color: var(--text-secondary); font-size: 0.7rem; border: 1px solid var(--border-subtle);">All-Time</span>
       </div>
-      <div class="stat-num" data-target="{{ value }}">{{ value }}</div>
-      <div style="font-size:.8rem;color:rgba(255,255,255,.75);margin-top:5px;font-weight:500;">{{ label }}</div>
+      <div class="stat-value" data-target="{{ stats.total }}">{{ stats.total }}</div>
+      <div class="stat-label">Total URLs Scanned</div>
     </div>
   </div>
-  {% endfor %}
+
+  <!-- Phishing Detected -->
+  <div class="col-6 col-lg-3">
+    <div class="stat-card-saas phishing-card h-100">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="stat-icon-box" style="background: var(--status-phishing-bg); color: var(--status-phishing);">
+          <i class="bi bi-bug-fill"></i>
+        </div>
+        <span class="badge-status phishing" style="font-size: 0.65rem;">High Risk</span>
+      </div>
+      <div class="stat-value" style="color: var(--status-phishing);" data-target="{{ stats.phishing }}">{{ stats.phishing }}</div>
+      <div class="stat-label">Phishing Threats</div>
+    </div>
+  </div>
+
+  <!-- Suspicious -->
+  <div class="col-6 col-lg-3">
+    <div class="stat-card-saas suspicious-card h-100">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="stat-icon-box" style="background: var(--status-suspicious-bg); color: var(--status-suspicious);">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+        <span class="badge-status suspicious" style="font-size: 0.65rem;">Moderate</span>
+      </div>
+      <div class="stat-value" style="color: var(--status-suspicious);" data-target="{{ stats.suspicious }}">{{ stats.suspicious }}</div>
+      <div class="stat-label">Suspicious Entities</div>
+    </div>
+  </div>
+
+  <!-- Safe -->
+  <div class="col-6 col-lg-3">
+    <div class="stat-card-saas safe-card h-100">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="stat-icon-box" style="background: var(--status-safe-bg); color: var(--status-safe);">
+          <i class="bi bi-shield-fill-check"></i>
+        </div>
+        <span class="badge-status safe" style="font-size: 0.65rem;">Verified</span>
+      </div>
+      <div class="stat-value" style="color: var(--status-safe);" data-target="{{ stats.safe }}">{{ stats.safe }}</div>
+      <div class="stat-label">Safe Domains</div>
+    </div>
+  </div>
 </div>
 
-<!-- Charts -->
-<div class="row g-3 mb-4">
+<!-- ══ CHARTS ROW ══ -->
+<div class="row g-3 mb-4 fade-in">
+  <!-- Threat Distribution (Donut) -->
   <div class="col-lg-4">
-    <div class="card chart-card h-100" style="background:rgba(12,10,35,.9);border:1px solid rgba(124,111,255,.2) !important;">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="bi bi-pie-chart-fill" style="color:#7c6fff;filter:drop-shadow(0 0 6px rgba(124,111,255,.7));"></i>
-        <span>Threat Distribution</span>
-        <span class="ms-auto pulse-dot"></span>
-      </div>
-      <div class="card-body d-flex flex-column align-items-center justify-content-center py-3">
-        <div style="position:relative;">
-          <canvas id="distChart" style="max-height:190px;max-width:190px;"></canvas>
-          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-            <div style="font-size:1.5rem;font-weight:900;color:#fff;">{{ stats.total }}</div>
-            <div style="font-size:.62rem;color:var(--muted);font-weight:700;letter-spacing:.6px;">TOTAL</div>
-          </div>
-        </div>
-        <div id="distLegend" class="d-flex gap-3 mt-3 flex-wrap justify-content-center"></div>
-      </div>
-    </div>
-  </div>
-  <div class="col-lg-8">
-    <div class="card chart-card h-100" style="background:rgba(12,10,35,.9);border:1px solid rgba(124,111,255,.2) !important;">
+    <div class="card h-100">
       <div class="card-header d-flex align-items-center justify-content-between">
         <div class="d-flex align-items-center gap-2">
-          <i class="bi bi-graph-up-arrow" style="color:#7c6fff;filter:drop-shadow(0 0 6px rgba(124,111,255,.7));"></i>
+          <i class="bi bi-pie-chart-fill" style="color: var(--accent-cyan);"></i>
+          <span>Threat Distribution</span>
+        </div>
+        <span class="live-indicator"></span>
+      </div>
+      <div class="card-body d-flex flex-column align-items-center justify-content-center py-3">
+        <div style="position: relative; width: 170px; height: 170px; margin: 0 auto;">
+          <canvas id="distChart" style="width: 170px; height: 170px;"></canvas>
+          <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; text-align: center;">
+            <div style="font-size: 2.2rem; font-weight: 900; font-family: 'Outfit', sans-serif; color: var(--text-primary); line-height: 1; margin-bottom: 2px;">
+              {{ stats.total }}
+            </div>
+            <div style="font-size: 0.65rem; color: var(--text-secondary); font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;">
+              SCANS
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom Centered HTML Legend -->
+        <div class="d-flex align-items-center justify-content-center gap-3 mt-3 flex-wrap" style="font-size: 0.75rem; font-weight: 600;">
+          <div class="d-flex align-items-center gap-1">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #22C55E; display: inline-block;"></span>
+            <span style="color: var(--text-secondary);">Safe</span>
+          </div>
+          <div class="d-flex align-items-center gap-1">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #F59E0B; display: inline-block;"></span>
+            <span style="color: var(--text-secondary);">Suspicious</span>
+          </div>
+          <div class="d-flex align-items-center gap-1">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #EF4444; display: inline-block;"></span>
+            <span style="color: var(--text-secondary);">Phishing</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Risk Score Trend (Line) -->
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-graph-up-arrow" style="color: var(--accent-blue);"></i>
           <span>Risk Score Trend</span>
         </div>
-        <span style="font-size:.72rem;color:var(--muted);background:rgba(255,255,255,.05);padding:.25em .7em;border-radius:6px;border:1px solid rgba(255,255,255,.08);">Last 14 scans</span>
+        <span class="badge" style="background: var(--bg-card-subtle); color: var(--text-secondary); border: 1px solid var(--border-subtle); font-size: 0.72rem;">
+          Last 14 Scans
+        </span>
       </div>
-      <div class="card-body"><canvas id="trendChart" style="max-height:190px;"></canvas></div>
+      <div class="card-body">
+        <div style="height: 200px; position: relative;">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="card chart-card mb-4" style="background:rgba(12,10,35,.9);border:1px solid rgba(124,111,255,.2) !important;">
+<!-- Daily Activity Bar Chart -->
+<div class="card mb-4 fade-in">
   <div class="card-header d-flex align-items-center justify-content-between">
     <div class="d-flex align-items-center gap-2">
-      <i class="bi bi-calendar3" style="color:#7c6fff;filter:drop-shadow(0 0 6px rgba(124,111,255,.7));"></i>
-      <span>Daily Scan Activity</span>
+      <i class="bi bi-calendar3" style="color: var(--accent-cyan);"></i>
+      <span>Daily Scanning Activity</span>
     </div>
-    <span style="font-size:.72rem;color:var(--muted);background:rgba(255,255,255,.05);padding:.25em .7em;border-radius:6px;border:1px solid rgba(255,255,255,.08);">Last 7 days</span>
+    <span class="badge" style="background: var(--bg-card-subtle); color: var(--text-secondary); border: 1px solid var(--border-subtle); font-size: 0.72rem;">
+      Last 7 Days
+    </span>
   </div>
-  <div class="card-body"><canvas id="dailyChart" style="max-height:150px;"></canvas></div>
+  <div class="card-body">
+    <div style="height: 160px; position: relative;">
+      <canvas id="dailyChart"></canvas>
+    </div>
+  </div>
 </div>
 
-<!-- Recent Scans -->
-<div class="card" style="background:rgba(12,10,35,.9);border:1px solid rgba(124,111,255,.2) !important;">
+<!-- ══ EMAIL SECURITY RECOMMENDATIONS ══ -->
+<div class="card mb-4 fade-in">
   <div class="card-header d-flex align-items-center justify-content-between">
     <div class="d-flex align-items-center gap-2">
-      <i class="bi bi-clock-history" style="color:#7c6fff;filter:drop-shadow(0 0 6px rgba(124,111,255,.7));"></i>
-      <span>Recent Scans</span>
+      <i class="bi bi-envelope-check-fill" style="color: var(--accent-cyan);"></i>
+      <span>Inbox & Email Security Intelligence</span>
+    </div>
+    <span class="badge" style="background: rgba(0, 229, 255, 0.12); color: var(--accent-cyan); border: 1px solid var(--border-card); font-size: 0.72rem;">
+      AI RECOMMENDATIONS
+    </span>
+  </div>
+  <div class="card-body p-3 p-lg-4">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-4">
+        <div class="d-flex align-items-start gap-3 p-2 rounded" style="background: var(--bg-secondary); border: 1px solid var(--border-subtle);">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(37, 99, 235, 0.15); color: var(--accent-blue); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+            <i class="bi bi-envelope-at-fill"></i>
+          </div>
+          <div>
+            <div class="fw-bold mb-1" style="font-size: 0.85rem;">Sender Domain Match</div>
+            <p class="mb-0 text-secondary" style="font-size: 0.78rem;">Always compare display names against actual SMTP sender domains to catch spoofing.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="d-flex align-items-start gap-3 p-2 rounded" style="background: var(--bg-secondary); border: 1px solid var(--border-subtle);">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(0, 229, 255, 0.15); color: var(--accent-cyan); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+            <i class="bi bi-search"></i>
+          </div>
+          <div>
+            <div class="fw-bold mb-1" style="font-size: 0.85rem;">Inspect URLs Before Opening</div>
+            <p class="mb-0 text-secondary" style="font-size: 0.78rem;">Paste unverified links into the Quick Scan bar above to verify domain age and SSL validity.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="d-flex align-items-start gap-3 p-2 rounded" style="background: var(--bg-secondary); border: 1px solid var(--border-subtle);">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(245, 158, 11, 0.15); color: #F59E0B; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+            <i class="bi bi-shield-exclamation"></i>
+          </div>
+          <div>
+            <div class="fw-bold mb-1" style="font-size: 0.85rem;">Zero-Trust Password Policy</div>
+            <p class="mb-0 text-secondary" style="font-size: 0.78rem;">Organizations never request password resets via direct email hyperlinks.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ RECENT SCANS TABLE ══ -->
+<div class="card fade-in">
+  <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-2">
+      <i class="bi bi-clock-history" style="color: var(--accent-blue);"></i>
+      <span>Recent Analysis History</span>
       {% if recent %}
-      <span style="background:rgba(124,111,255,.2);color:#a78bfa;font-size:.72rem;font-weight:700;padding:.2em .7em;border-radius:6px;border:1px solid rgba(124,111,255,.35);">{{ recent|length }}</span>
+      <span class="badge" style="background: rgba(0, 229, 255, 0.12); color: var(--accent-cyan); border: 1px solid var(--border-card); font-size: 0.75rem;">
+        {{ recent|length }}
+      </span>
       {% endif %}
     </div>
-    <a href="{{ url_for('scanner.scan') }}" class="btn btn-sm" style="border-radius:8px;font-size:.78rem;background:rgba(124,111,255,.15);border:1px solid rgba(124,111,255,.35);color:#a78bfa;">
-      <i class="bi bi-plus me-1"></i>New Scan
-    </a>
+    <div class="d-flex align-items-center gap-2">
+      <div style="position: relative;">
+        <i class="bi bi-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.8rem; pointer-events: none;"></i>
+        <input id="scanSearch" type="text" placeholder="Filter URLs..."
+               class="form-control form-control-sm ps-4"
+               style="width: 170px; font-size: 0.8rem;"
+               oninput="filterScans(this.value)"/>
+      </div>
+      <a href="{{ url_for('scanner.scan') }}" class="btn btn-sm btn-cyber-ghost">
+        <i class="bi bi-plus-lg"></i>
+      </a>
+    </div>
   </div>
+
   <div class="card-body p-0">
     {% if recent %}
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0 scan-table">
-        <thead><tr><th>URL</th><th>Verdict</th><th>Confidence</th><th style="min-width:140px;">Risk Score</th><th>Scanned</th><th>Actions</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Target URL</th>
+            <th>Verdict</th>
+            <th>Confidence</th>
+            <th style="min-width: 150px;">Risk Score</th>
+            <th>Scanned At</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
         <tbody>
           {% for scan in recent %}
-          <tr>
+          <tr data-url="{{ scan.url }}">
             <td>
               <div class="d-flex align-items-center gap-2">
-                <div style="width:30px;height:30px;border-radius:9px;flex-shrink:0;
-                  background:{% if scan.prediction=='Safe' %}rgba(16,185,129,.2){% elif scan.prediction=='Suspicious' %}rgba(245,158,11,.2){% else %}rgba(239,68,68,.2){% endif %};
-                  border:1px solid {% if scan.prediction=='Safe' %}rgba(16,185,129,.4){% elif scan.prediction=='Suspicious' %}rgba(245,158,11,.4){% else %}rgba(239,68,68,.4){% endif %};
-                  display:flex;align-items:center;justify-content:center;">
+                <div style="width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+                            background: {% if scan.prediction=='Safe' %}var(--status-safe-bg){% elif scan.prediction=='Suspicious' %}var(--status-suspicious-bg){% else %}var(--status-phishing-bg){% endif %};
+                            border: 1px solid {% if scan.prediction=='Safe' %}var(--status-safe-border){% elif scan.prediction=='Suspicious' %}var(--status-suspicious-border){% else %}var(--status-phishing-border){% endif %};
+                            display: flex; align-items: center; justify-content: center;">
                   <i class="bi {% if scan.prediction=='Safe' %}bi-shield-check{% elif scan.prediction=='Suspicious' %}bi-exclamation-triangle{% else %}bi-bug{% endif %}"
-                     style="font-size:.75rem;color:{% if scan.prediction=='Safe' %}#10b981{% elif scan.prediction=='Suspicious' %}#f59e0b{% else %}#ef4444{% endif %};"></i>
+                     style="font-size: 0.85rem; color: {% if scan.prediction=='Safe' %}var(--status-safe){% elif scan.prediction=='Suspicious' %}var(--status-suspicious){% else %}var(--status-phishing){% endif %};"></i>
                 </div>
-                <span class="url-cell" title="{{ scan.url }}" style="color:#e0e0e0;font-size:.845rem;">{{ scan.url }}</span>
+                <span class="url-truncate" title="{{ scan.url }}">{{ scan.url }}</span>
               </div>
             </td>
             <td>
               {% if scan.prediction=='Safe' %}
-                <span class="badge" style="background:rgba(16,185,129,.18);color:#34d399;border:1px solid rgba(16,185,129,.4);border-radius:8px;padding:.35em .8em;font-weight:700;"><i class="bi bi-shield-check me-1"></i>Safe</span>
+                <span class="badge-status safe"><i class="bi bi-shield-check"></i>Safe</span>
               {% elif scan.prediction=='Suspicious' %}
-                <span class="badge" style="background:rgba(245,158,11,.18);color:#fbbf24;border:1px solid rgba(245,158,11,.4);border-radius:8px;padding:.35em .8em;font-weight:700;"><i class="bi bi-exclamation-triangle me-1"></i>Suspicious</span>
+                <span class="badge-status suspicious"><i class="bi bi-exclamation-triangle"></i>Suspicious</span>
               {% else %}
-                <span class="badge" style="background:rgba(239,68,68,.18);color:#f87171;border:1px solid rgba(239,68,68,.4);border-radius:8px;padding:.35em .8em;font-weight:700;"><i class="bi bi-bug me-1"></i>Phishing</span>
+                <span class="badge-status phishing"><i class="bi bi-bug"></i>Phishing</span>
               {% endif %}
             </td>
-            <td><span style="font-weight:800;font-size:.9rem;color:{% if scan.risk_score<30 %}#34d399{% elif scan.risk_score<60 %}#fbbf24{% else %}#f87171{% endif %};">{{ scan.confidence }}%</span></td>
+            <td>
+              <span class="fw-bold" style="color: var(--text-primary); font-size: 0.9rem;">{{ scan.confidence }}%</span>
+            </td>
             <td>
               <div class="d-flex align-items-center gap-2">
-                <div class="progress flex-grow-1" style="height:7px;">
-                  <div class="progress-bar" style="width:{{ scan.risk_score }}%;border-radius:99px;background:{% if scan.risk_score<30 %}linear-gradient(90deg,#10b981,#34d399){% elif scan.risk_score<60 %}linear-gradient(90deg,#f59e0b,#fbbf24){% else %}linear-gradient(90deg,#ef4444,#f87171){% endif %};box-shadow:{% if scan.risk_score<30 %}0 0 8px rgba(16,185,129,.6){% elif scan.risk_score<60 %}0 0 8px rgba(245,158,11,.6){% else %}0 0 8px rgba(239,68,68,.6){% endif %};"></div>
+                <div class="progress flex-grow-1" style="height: 7px;">
+                  <div class="progress-bar"
+                       style="width: {{ scan.risk_score }}%;
+                              background: {% if scan.risk_score < 30 %}var(--status-safe){% elif scan.risk_score < 60 %}var(--status-suspicious){% else %}var(--status-phishing){% endif %};"></div>
                 </div>
-                <span style="font-size:.8rem;color:var(--muted);min-width:26px;font-weight:600;">{{ scan.risk_score }}</span>
+                <span style="font-size: 0.8rem; color: var(--text-secondary); min-width: 28px; font-weight: 700;">{{ scan.risk_score }}</span>
               </div>
             </td>
-            <td style="color:var(--muted);font-size:.78rem;white-space:nowrap;">{{ scan.scanned_at.strftime('%d %b, %H:%M') }}</td>
-            <td>
-              <div class="d-flex gap-1">
-                <a href="{{ url_for('scanner.result', scan_id=scan.id) }}" class="btn btn-sm" style="border-radius:8px;background:rgba(124,111,255,.15);border:1px solid rgba(124,111,255,.35);color:#a78bfa;" title="View"><i class="bi bi-eye"></i></a>
-                <a href="{{ url_for('scanner.download_report', scan_id=scan.id) }}" class="btn btn-sm" style="border-radius:8px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#f87171;" title="PDF"><i class="bi bi-file-earmark-pdf"></i></a>
+            <td style="color: var(--text-muted); font-size: 0.8rem; white-space: nowrap;">
+              {{ scan.scanned_at.strftime('%b %d, %H:%M') }}
+            </td>
+            <td class="text-end">
+              <div class="d-inline-flex gap-1">
+                <a href="{{ url_for('scanner.result', scan_id=scan.id) }}" class="btn btn-sm btn-cyber-ghost" title="View Full Report">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <a href="{{ url_for('scanner.download_report', scan_id=scan.id) }}" class="btn btn-sm btn-cyber-danger" title="Download PDF">
+                  <i class="bi bi-file-earmark-pdf"></i>
+                </a>
               </div>
             </td>
           </tr>
@@ -231,11 +416,11 @@
     </div>
     {% else %}
     <div class="text-center py-5">
-      <div style="width:72px;height:72px;border-radius:22px;background:rgba(124,111,255,.12);border:1px solid rgba(124,111,255,.25);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;box-shadow:0 0 30px rgba(124,111,255,.2);">
-        <i class="bi bi-shield-slash" style="font-size:1.9rem;color:#7c6fff;"></i>
+      <div style="width: 64px; height: 64px; border-radius: 18px; background: var(--bg-card-subtle); border: 1px solid var(--border-card); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; color: var(--accent-cyan);">
+        <i class="bi bi-shield-check fs-2"></i>
       </div>
-      <p class="mb-1 fw-semibold">No scans yet</p>
-      <p style="font-size:.845rem;color:var(--muted);">Use the Quick Scan bar above or <a href="{{ url_for('scanner.scan') }}" style="color:#a78bfa;">open the scanner</a>.</p>
+      <h6 class="fw-bold mb-1">No Scans Recorded Yet</h6>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Inspect your first URL above to see real-time AI security metrics.</p>
     </div>
     {% endif %}
   </div>
@@ -244,42 +429,232 @@
 
 {% block extra_scripts %}
 <script>
-function tick(){ document.getElementById('liveClock').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
-tick(); setInterval(tick,1000);
+/* ── Live Ticker Items ── */
+const THREATS = [
+  '🚨 Live Campaign: Credential harvesting targets Microsoft 365 OAuth portals',
+  '⚠️ Typosquatting Alert: Fake banking lookalike subdomains detected and cataloged',
+  '🛡️ Zero-Day Feed: New SMS smishing templates analyzed by Phishgaurd AI',
+  '🔴 High Risk Alert: Suspicious login redirects on unverified TLDs',
+  '🚨 Phishing Wave: AI-generated brand spoofing emails bypassing traditional filters',
+  '⚠️ Crypto Stealer Alert: Fake Web3 wallet connecting domains intercepted'
+];
+const ticker = document.getElementById('threatTicker');
+if (ticker) {
+  ticker.innerHTML = [...THREATS, ...THREATS].map(t => `<span class="ticker-item"><i class="bi bi-dot me-1"></i>${t}</span>`).join('');
+}
 
-document.getElementById('quickForm').addEventListener('submit',function(){
+/* ── Live Clock ── */
+function updateClock() {
+  const el = document.getElementById('liveClock');
+  if (el) {
+    el.textContent = new Date().toLocaleTimeString('en-US', { hour12: false });
+  }
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+/* ── Filter Scans Table ── */
+function filterScans(query) {
+  const rows = document.querySelectorAll('tbody tr[data-url]');
+  const q = query.toLowerCase();
+  rows.forEach(r => {
+    r.style.display = r.dataset.url.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+/* ── Quick Scan Form Spinner ── */
+document.getElementById('quickScanForm')?.addEventListener('submit', function() {
   document.getElementById('qBtnText').classList.add('d-none');
   document.getElementById('qBtnSpin').classList.remove('d-none');
-  document.getElementById('quickBtn').disabled=true;
+  document.getElementById('quickScanBtn').disabled = true;
 });
 
-document.querySelectorAll('.stat-num[data-target]').forEach(el=>{
-  const t=parseInt(el.dataset.target)||0; if(!t) return;
-  let c=0; const s=Math.ceil(t/40);
-  const iv=setInterval(()=>{ c=Math.min(c+s,t); el.textContent=c; if(c>=t) clearInterval(iv); },28);
+/* ── Metric Counter Ease Animation ── */
+document.querySelectorAll('.stat-value[data-target]').forEach(el => {
+  const target = parseInt(el.dataset.target) || 0;
+  if (!target) return;
+  const duration = 1200, start = performance.now();
+  function step(now) {
+    const progress = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(ease * target);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
 });
 
-Chart.defaults.color='#6b6b8a';
-Chart.defaults.borderColor='rgba(255,255,255,0.05)';
+/* ── Dynamic Chart.js Rendering & Theme Adaptation ── */
+let chartInstances = {};
 
-fetch('/dashboard/api/chart-data').then(r=>r.json()).then(data=>{
-  const dCtx=document.getElementById('distChart');
-  new Chart(dCtx,{type:'doughnut',data:{labels:data.distribution.labels,datasets:[{data:data.distribution.data,backgroundColor:['rgba(16,185,129,.9)','rgba(245,158,11,.9)','rgba(239,68,68,.9)'],borderColor:['#10b981','#f59e0b','#ef4444'],borderWidth:2,hoverOffset:12}]},options:{cutout:'75%',plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(8,6,24,.97)',borderColor:'rgba(124,111,255,.4)',borderWidth:1,padding:14,cornerRadius:10}},animation:{duration:1000}}});
-  const clrs=['#10b981','#f59e0b','#ef4444'];
-  const leg=document.getElementById('distLegend');
-  data.distribution.labels.forEach((l,i)=>{
-    leg.innerHTML+=`<div style="display:flex;align-items:center;gap:6px;font-size:.775rem;"><span style="width:10px;height:10px;border-radius:50%;background:${clrs[i]};display:inline-block;box-shadow:0 0 8px ${clrs[i]};"></span><span style="color:var(--muted);">${l}</span><span style="font-weight:800;color:${clrs[i]};">${data.distribution.data[i]}</span></div>`;
+function getChartColors() {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  return {
+    textColor: isLight ? '#64748B' : '#94A3B8',
+    gridColor: isLight ? '#E2E8F0' : 'rgba(255, 255, 255, 0.05)',
+    tooltipBg: isLight ? '#FFFFFF' : '#0D1B2A',
+    tooltipText: isLight ? '#0F172A' : '#F8FAFC',
+    tooltipBorder: isLight ? '#CBD5E1' : 'rgba(0, 229, 255, 0.25)',
+    lineColor: isLight ? '#2563EB' : '#00E5FF',
+    lineFillStart: isLight ? 'rgba(37, 99, 235, 0.25)' : 'rgba(0, 229, 255, 0.35)',
+    lineFillEnd: isLight ? 'rgba(37, 99, 235, 0.0)' : 'rgba(0, 229, 255, 0.0)',
+    barColor: isLight ? '#2563EB' : '#00E5FF',
+  };
+}
+
+fetch('/dashboard/api/chart-data')
+  .then(r => r.json())
+  .then(data => {
+    initCharts(data);
+
+    // Re-theme charts when theme switch event fires
+    window.addEventListener('pg_theme_changed', () => {
+      Object.values(chartInstances).forEach(chart => chart.destroy());
+      chartInstances = {};
+      initCharts(data);
+    });
   });
 
-  const tCtx=document.getElementById('trendChart');
-  const tG=tCtx.getContext('2d').createLinearGradient(0,0,0,200);
-  tG.addColorStop(0,'rgba(124,111,255,.5)'); tG.addColorStop(1,'rgba(124,111,255,0)');
-  new Chart(tCtx,{type:'line',data:{labels:data.risk_trend.labels,datasets:[{label:'Risk Score',data:data.risk_trend.data,borderColor:'#7c6fff',borderWidth:3,backgroundColor:tG,tension:.42,fill:true,pointRadius:5,pointBackgroundColor:'#7c6fff',pointBorderColor:'#07071a',pointBorderWidth:2,pointHoverRadius:8,pointHoverBackgroundColor:'#a855f7'}]},options:{scales:{y:{min:0,max:100,grid:{color:'rgba(255,255,255,.05)'},ticks:{stepSize:25,font:{size:11}}},x:{grid:{display:false},ticks:{font:{size:11}}}},plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(8,6,24,.97)',borderColor:'rgba(124,111,255,.4)',borderWidth:1,padding:14,cornerRadius:10}},animation:{duration:1200}}});
+function initCharts(data) {
+  const colors = getChartColors();
 
-  const bCtx=document.getElementById('dailyChart');
-  const bG=bCtx.getContext('2d').createLinearGradient(0,0,0,150);
-  bG.addColorStop(0,'rgba(168,85,247,.95)'); bG.addColorStop(1,'rgba(124,111,255,.3)');
-  new Chart(bCtx,{type:'bar',data:{labels:data.daily_scans.labels,datasets:[{label:'Scans',data:data.daily_scans.data,backgroundColor:bG,borderRadius:10,borderSkipped:false,hoverBackgroundColor:'rgba(168,85,247,1)'}]},options:{plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(8,6,24,.97)',borderColor:'rgba(124,111,255,.4)',borderWidth:1,padding:14,cornerRadius:10}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,font:{size:11}},grid:{color:'rgba(255,255,255,.05)'}},x:{grid:{display:false},ticks:{font:{size:11}}}},animation:{duration:1000}}});
-});
+  // 1. Threat Distribution Doughnut
+  const distEl = document.getElementById('distChart');
+  if (distEl) {
+    chartInstances.dist = new Chart(distEl, {
+      type: 'doughnut',
+      data: {
+        labels: data.distribution.labels,
+        datasets: [{
+          data: data.distribution.data,
+          backgroundColor: ['#16A34A', '#D97706', '#DC2626'],
+          borderColor: document.documentElement.getAttribute('data-theme') === 'light' ? '#FFFFFF' : '#0D1B2A',
+          borderWidth: 3,
+          hoverOffset: 6,
+        }]
+      },
+      options: {
+        cutout: '78%',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: colors.tooltipBg,
+            titleColor: colors.tooltipText,
+            bodyColor: colors.tooltipText,
+            borderColor: colors.tooltipBorder,
+            borderWidth: 1,
+            padding: 10,
+            cornerRadius: 10,
+            boxPadding: 4,
+          }
+        }
+      }
+    });
+  }
+
+  // 2. Risk Score Trend Line
+  const trendEl = document.getElementById('trendChart');
+  if (trendEl) {
+    const ctx = trendEl.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 0, 200);
+    grad.addColorStop(0, colors.lineFillStart);
+    grad.addColorStop(1, colors.lineFillEnd);
+
+    chartInstances.trend = new Chart(trendEl, {
+      type: 'line',
+      data: {
+        labels: data.risk_trend.labels,
+        datasets: [{
+          label: 'Risk Score',
+          data: data.risk_trend.data,
+          borderColor: colors.lineColor,
+          borderWidth: 2.5,
+          backgroundColor: grad,
+          tension: 0.4,
+          fill: true,
+          pointRadius: 4,
+          pointBackgroundColor: colors.lineColor,
+          pointBorderColor: document.documentElement.getAttribute('data-theme') === 'light' ? '#FFFFFF' : '#07111F',
+          pointBorderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            min: 0, max: 100,
+            grid: { color: colors.gridColor },
+            ticks: { color: colors.textColor, font: { size: 10 } }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: colors.textColor, font: { size: 10 } }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: colors.tooltipBg,
+            titleColor: colors.tooltipText,
+            bodyColor: colors.tooltipText,
+            borderColor: colors.tooltipBorder,
+            borderWidth: 1,
+            padding: 10,
+            cornerRadius: 10
+          }
+        }
+      }
+    });
+  }
+
+  // 3. Daily Activity Bar
+  const dailyEl = document.getElementById('dailyChart');
+  if (dailyEl) {
+    chartInstances.daily = new Chart(dailyEl, {
+      type: 'bar',
+      data: {
+        labels: data.daily_scans.labels,
+        datasets: [{
+          label: 'Scans',
+          data: data.daily_scans.data,
+          backgroundColor: colors.barColor,
+          borderRadius: 8,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: colors.gridColor },
+            ticks: { stepSize: 1, color: colors.textColor, font: { size: 10 } }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: colors.textColor, font: { size: 10 } }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: colors.tooltipBg,
+            titleColor: colors.tooltipText,
+            bodyColor: colors.tooltipText,
+            borderColor: colors.tooltipBorder,
+            borderWidth: 1,
+            padding: 10,
+            cornerRadius: 10
+          }
+        }
+      }
+    });
+  }
+}
 </script>
 {% endblock %}

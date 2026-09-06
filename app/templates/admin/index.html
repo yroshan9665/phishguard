@@ -1,503 +1,420 @@
 {% extends "base.html" %}
-{% block title %}Admin Panel — PhishGuard AI{% endblock %}
+{% block title %}Admin Console — Phishgaurd AI{% endblock %}
 
 {% block extra_head %}
 <style>
-  /* ── Admin stat cards ── */
-  .admin-stat {
-    border-radius: 18px; padding: 1.3rem 1.4rem;
-    position: relative; overflow: hidden;
-    transition: transform .25s, box-shadow .25s;
-    cursor: default;
-  }
-  .admin-stat::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,.07) 0%, transparent 55%);
-    pointer-events: none;
-  }
-  .admin-stat::after {
-    content: '';
-    position: absolute; top: -30%; right: -15%;
-    width: 100px; height: 100px; border-radius: 50%;
-    background: rgba(255,255,255,.06); pointer-events: none;
-  }
-  .admin-stat:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 18px 48px rgba(0,0,0,.4); }
-  .admin-stat-num {
-    font-size: 2.2rem; font-weight: 800; line-height: 1;
-    background: linear-gradient(135deg, #fff 40%, rgba(255,255,255,.6));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  }
-
-  /* ── Admin badge ── */
-  .admin-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(245,158,11,.12); color: #f59e0b;
-    border: 1px solid rgba(245,158,11,.28);
-    padding: .4em 1em; border-radius: 10px;
-    font-size: .78rem; font-weight: 700;
-    box-shadow: 0 0 20px rgba(245,158,11,.08);
-  }
-
-  /* ── Table ── */
-  .admin-table td { padding: .7rem 1rem; font-size: .855rem; }
-  .admin-table th { padding: .6rem 1rem; font-size: .78rem; font-weight: 700;
-                    text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
-
-  /* ── Avatar ── */
-  .user-avatar {
-    width: 32px; height: 32px; border-radius: 50%;
-    background: linear-gradient(135deg, #7c6fff, #a855f7);
-    display: flex; align-items: center; justify-content: center;
-    font-size: .78rem; font-weight: 700; color: #fff; flex-shrink: 0;
-    box-shadow: 0 0 12px rgba(124,111,255,.3);
-  }
-
-  /* ── Action buttons ── */
-  .act-btn {
-    width: 30px; height: 30px; border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: .8rem; cursor: pointer; transition: all .2s;
-    border: 1px solid; text-decoration: none;
-  }
-  .act-btn:hover { transform: translateY(-1px); }
-
-  /* ── Chart cards ── */
-  .chart-card-admin {
-    border-radius: 18px; overflow: hidden;
-    backdrop-filter: blur(12px);
-    transition: box-shadow .2s;
-  }
-  .chart-card-admin:hover { box-shadow: 0 8px 32px rgba(0,0,0,.25); }
-
-  /* ── Scan line on header ── */
   .admin-header-card {
-    background: rgba(15,12,40,.8);
-    border: 1px solid rgba(245,158,11,.15);
-    border-radius: 18px; padding: 1.2rem 1.4rem;
+    border-radius: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    box-shadow: var(--shadow-card);
+    padding: 1.25rem 1.5rem;
     margin-bottom: 1.5rem;
-    backdrop-filter: blur(12px);
-    position: relative; overflow: hidden;
+    position: relative;
+    overflow: hidden;
   }
   .admin-header-card::before {
     content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, #f59e0b, #ef4444, #f59e0b);
-    background-size: 200% 100%;
-    animation: adminBar 3s linear infinite;
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, #F59E0B, #EF4444, #2563EB);
   }
-  @keyframes adminBar { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
 
-  /* ── Progress bar ── */
-  .progress { background: rgba(255,255,255,.06); border-radius: 99px; }
+  .user-avatar-circle {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00E5FF, #2563EB);
+    color: #FFFFFF;
+    font-size: 0.8rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
 
-  /* ── Card hover ── */
-  .card { transition: border-color .2s; }
-  .card:hover { border-color: rgba(124,111,255,.25); }
+  .admin-action-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+  }
+  .admin-action-btn:hover {
+    transform: translateY(-1px);
+    color: var(--text-primary);
+    border-color: var(--accent-cyan);
+  }
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="fade-in">
 
-<!-- ══ HEADER ══ -->
-<div class="admin-header-card d-flex align-items-center justify-content-between flex-wrap gap-3">
-  <div>
-    <h4 class="fw-bold mb-1">
-      <span style="background:linear-gradient(90deg,#f59e0b,#ef4444);
-                   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-                   font-size:1.5rem;">
-        <i class="bi bi-shield-lock me-2" style="-webkit-text-fill-color:#f59e0b;"></i>Admin Panel
-      </span>
-    </h4>
-    <p class="mb-0" style="font-size:.82rem;color:var(--muted);">
-      Global management &nbsp;·&nbsp;
-      <span style="color:var(--txt);font-weight:600;">{{ stats.total_users }}</span> users &nbsp;·&nbsp;
-      <span style="color:var(--txt);font-weight:600;">{{ stats.total_scans }}</span> scans
-    </p>
-  </div>
-  <div class="d-flex gap-2 align-items-center flex-wrap">
-    <span class="admin-badge"><i class="bi bi-shield-fill-check"></i>Administrator</span>
-    <a href="{{ url_for('admin.export_excel') }}"
-       class="btn btn-sm fw-semibold d-flex align-items-center gap-2"
-       style="border-radius:10px;height:36px;
-              background:linear-gradient(135deg,rgba(16,185,129,.14),rgba(6,182,212,.14));
-              border:1px solid rgba(16,185,129,.3);color:#10b981;
-              box-shadow:0 0 16px rgba(16,185,129,.08);">
-      <i class="bi bi-file-earmark-excel-fill"></i>Export Excel
-    </a>
-  </div>
-</div>
-
-<!-- ══ STAT CARDS ══ -->
-<div class="row g-3 mb-4">
-  {% set admin_cards = [
-    ('Total Users',       stats.total_users,    'bi-people-fill',         'linear-gradient(135deg,#7c6fff,#4a47a3)'),
-    ('Total Scans',       stats.total_scans,    'bi-bar-chart-line-fill', 'linear-gradient(135deg,#06b6d4,#0369a1)'),
-    ('Phishing Detected', stats.phishing_count, 'bi-bug-fill',            'linear-gradient(135deg,#ef4444,#9b1a26)'),
-    ('Safe Sites',        stats.safe_count,     'bi-shield-fill-check',   'linear-gradient(135deg,#10b981,#065f46)'),
-  ] %}
-  {% for label, value, icon, grad in admin_cards %}
-  <div class="col-6 col-lg-3">
-    <div class="admin-stat h-100" style="background:{{ grad }};border:none;">
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <div style="width:46px;height:46px;border-radius:13px;background:rgba(255,255,255,.15);
-                    display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);">
-          <i class="bi {{ icon }}" style="font-size:1.3rem;color:#fff;"></i>
+  <!-- ══ ADMIN HEADER CARD ══ -->
+  <div class="admin-header-card d-flex align-items-center justify-content-between flex-wrap gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <img src="{{ url_for('static', filename='images/logo_icon.png') }}"
+           alt="PhishGuard AI Admin Logo"
+           style="height: 52px; width: auto; filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.65));"/>
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.72rem; font-weight: 700;">
+            <i class="bi bi-shield-lock-fill me-1"></i>ADMIN PRIVILEGES
+          </span>
+          <span style="color: var(--text-muted); font-size: 0.8rem;">Global Security Control</span>
+        </div>
+        <h1 class="fw-bold mb-0" style="font-size: 1.65rem; font-family: 'Outfit', sans-serif;">
+          <span style="background: linear-gradient(135deg, #F59E0B, #EF4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+            Enterprise Administration Console
+          </span>
+        </h1>
+        <div class="d-flex align-items-center gap-2 mt-1" style="font-size: 0.825rem; color: var(--text-secondary);">
+          <span><strong>{{ stats.total_users }}</strong> Registered Users</span>
+          <span>&middot;</span>
+          <span><strong>{{ stats.total_scans }}</strong> Global URLs Analyzed</span>
         </div>
       </div>
-      <div class="admin-stat-num" data-target="{{ value }}">{{ value }}</div>
-      <div style="font-size:.8rem;color:rgba(255,255,255,.7);margin-top:5px;">{{ label }}</div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a href="{{ url_for('admin.export_excel') }}" class="btn btn-cyber-success">
+        <i class="bi bi-file-earmark-excel-fill me-1"></i>Export Excel Report
+      </a>
     </div>
   </div>
-  {% endfor %}
-</div>
 
-<!-- ══ CHARTS ══ -->
-<div class="row g-3 mb-4">
-  <div class="col-lg-5">
-    <div class="card chart-card-admin h-100" style="background:rgba(15,12,40,.8);">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="bi bi-pie-chart-fill" style="color:var(--accent);"></i>
-        Global Threat Distribution
+  <!-- ══ STAT METRICS ══ -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="stat-card-saas total-card h-100">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="stat-icon-box" style="background: rgba(37, 99, 235, 0.12); color: var(--accent-blue);">
+            <i class="bi bi-people-fill"></i>
+          </div>
+          <span class="badge" style="background: var(--bg-card-subtle); color: var(--text-secondary); border: 1px solid var(--border-subtle); font-size: 0.7rem;">Users</span>
+        </div>
+        <div class="stat-value">{{ stats.total_users }}</div>
+        <div class="stat-label">Total Registered Accounts</div>
       </div>
-      <div class="card-body d-flex align-items-center justify-content-center py-4">
-        <div style="position:relative;">
-          <canvas id="adminDistChart" style="max-height:200px;max-width:200px;"></canvas>
-          <div style="position:absolute;inset:0;display:flex;flex-direction:column;
-               align-items:center;justify-content:center;pointer-events:none;">
-            <div style="font-size:1.3rem;font-weight:800;color:#fff;">{{ stats.total_scans }}</div>
-            <div style="font-size:.62rem;color:var(--muted);font-weight:600;letter-spacing:.5px;">SCANS</div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="stat-card-saas h-100" style="border-left: 3px solid var(--accent-cyan) !important;">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="stat-icon-box" style="background: rgba(0, 229, 255, 0.12); color: var(--accent-cyan);">
+            <i class="bi bi-activity"></i>
+          </div>
+          <span class="badge" style="background: var(--bg-card-subtle); color: var(--text-secondary); border: 1px solid var(--border-subtle); font-size: 0.7rem;">Volume</span>
+        </div>
+        <div class="stat-value">{{ stats.total_scans }}</div>
+        <div class="stat-label">Total System Scans</div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="stat-card-saas phishing-card h-100">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="stat-icon-box" style="background: var(--status-phishing-bg); color: var(--status-phishing);">
+            <i class="bi bi-bug-fill"></i>
+          </div>
+          <span class="badge-status phishing" style="font-size: 0.65rem;">Threats</span>
+        </div>
+        <div class="stat-value" style="color: var(--status-phishing);">{{ stats.phishing_count }}</div>
+        <div class="stat-label">Phishing Inceptions</div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="stat-card-saas safe-card h-100">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="stat-icon-box" style="background: var(--status-safe-bg); color: var(--status-safe);">
+            <i class="bi bi-shield-fill-check"></i>
+          </div>
+          <span class="badge-status safe" style="font-size: 0.65rem;">Clean</span>
+        </div>
+        <div class="stat-value" style="color: var(--status-safe);">{{ stats.safe_count }}</div>
+        <div class="stat-label">Safe Verified Domains</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ADMIN CHARTS ══ -->
+  <div class="row g-3 mb-4">
+    <!-- Donut Distribution -->
+    <div class="col-lg-5">
+      <div class="card h-100">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-pie-chart-fill" style="color: var(--accent-cyan);"></i>
+            <span>Global Threat Distribution</span>
+          </div>
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center py-4">
+          <div style="width: 190px; height: 190px; position: relative;">
+            <canvas id="adminDistChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Users by Volume -->
+    <div class="col-lg-7">
+      <div class="card h-100">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-bar-chart-fill" style="color: var(--accent-blue);"></i>
+            <span>Top Active Users by Scans</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div style="height: 190px; position: relative;">
+            <canvas id="topUsersChart"></canvas>
           </div>
         </div>
       </div>
     </div>
   </div>
-  <div class="col-lg-7">
-    <div class="card chart-card-admin h-100" style="background:rgba(15,12,40,.8);">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="bi bi-person-lines-fill" style="color:var(--accent);"></i>
-        Top Users by Scan Count
+
+  <!-- ══ USER MANAGEMENT TABLE ══ -->
+  <div class="card mb-4">
+    <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-people-fill" style="color: var(--accent-blue);"></i>
+        <span>User Accounts Management</span>
+        <span class="badge" style="background: var(--bg-card-subtle); color: var(--text-secondary); border: 1px solid var(--border-subtle);">
+          {{ users|length }}
+        </span>
       </div>
-      <div class="card-body">
-        <canvas id="topUsersChart" style="max-height:220px;"></canvas>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Email Address</th>
+              <th>Role</th>
+              <th>Joined Date</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="user-avatar-circle">
+                    {{ u.username[:1].upper() }}
+                  </div>
+                  <div>
+                    <div class="fw-bold" style="color: var(--text-primary); font-size: 0.875rem;">{{ u.username }}</div>
+                    {% if u.id == current_user.id %}
+                    <span class="badge" style="font-size: 0.65rem; background: rgba(0, 229, 255, 0.1); color: var(--accent-cyan);">You</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </td>
+              <td style="color: var(--text-secondary); font-size: 0.85rem;">{{ u.email }}</td>
+              <td>
+                {% if u.is_admin %}
+                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 700; font-size: 0.72rem;">
+                  <i class="bi bi-shield-lock-fill me-1"></i>Admin
+                </span>
+                {% else %}
+                <span class="badge" style="background: var(--bg-card-subtle); color: var(--text-secondary); border: 1px solid var(--border-subtle); font-size: 0.72rem;">
+                  User
+                </span>
+                {% endif %}
+              </td>
+              <td style="color: var(--text-muted); font-size: 0.825rem;">
+                {{ u.created_at.strftime('%Y-%m-%d') }}
+              </td>
+              <td class="text-end">
+                <div class="d-inline-flex gap-1">
+                  <!-- Toggle Admin Form -->
+                  <form method="POST" action="{{ url_for('admin.toggle_admin', user_id=u.id) }}" class="d-inline"
+                        onsubmit="return confirm('Toggle admin privileges for {{ u.username }}?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="admin-action-btn" title="Toggle Admin Role" {% if u.id == current_user.id %}disabled{% endif %}>
+                      <i class="bi bi-arrow-repeat"></i>
+                    </button>
+                  </form>
+
+                  <!-- Delete User Form -->
+                  <form method="POST" action="{{ url_for('admin.delete_user', user_id=u.id) }}" class="d-inline"
+                        onsubmit="return confirm('Permanently delete account {{ u.username }} and all associated scan records?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="admin-action-btn text-danger" title="Delete User" {% if u.id == current_user.id %}disabled{% endif %}>
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
-</div>
 
-<!-- ══ USER MANAGEMENT ══ -->
-<div class="card mb-4" style="background:rgba(15,12,40,.8);backdrop-filter:blur(12px);">
-  <div class="card-header d-flex align-items-center gap-2">
-    <i class="bi bi-people-fill" style="color:var(--accent);"></i>
-    User Management
-    <span class="ms-auto" style="background:rgba(124,111,255,.15);color:var(--accent);
-          border:1px solid rgba(124,111,255,.3);font-size:.72rem;font-weight:600;
-          padding:.2em .7em;border-radius:6px;">
-      {{ users|length }} users
-    </span>
-  </div>
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0 admin-table">
-        <thead>
-          <tr>
-            <th>#</th><th>Username</th><th class="hide-sm">Email</th><th>Role</th>
-            <th class="hide-sm">Joined</th><th class="hide-md">Scans</th><th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for user in users %}
-          <tr>
-            <td style="color:var(--muted);font-size:.82rem;">{{ user.id }}</td>
-            <td>
-              <div class="d-flex align-items-center gap-2">
-                <div class="user-avatar">{{ user.username[0].upper() }}</div>
-                <span class="fw-semibold" style="font-size:.875rem;">{{ user.username }}</span>
-              </div>
-            </td>
-            <td class="hide-sm" style="color:var(--muted);font-size:.845rem;">{{ user.email }}</td>
-            <td>
-              {% if user.is_admin %}
-                <span style="background:rgba(245,158,11,.12);color:#f59e0b;
-                             border:1px solid rgba(245,158,11,.25);border-radius:8px;
-                             font-size:.72rem;font-weight:700;padding:.3em .75em;
-                             display:inline-flex;align-items:center;gap:4px;">
-                  <i class="bi bi-shield-fill"></i>Admin
+  <!-- ══ LOGIN AUDIT LOGS ══ -->
+  <div class="card">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-journal-text" style="color: var(--accent-cyan);"></i>
+        <span>Security Authentication Audit Log</span>
+      </div>
+      <span class="badge" style="background: var(--bg-card-subtle); color: var(--text-secondary); border: 1px solid var(--border-subtle); font-size: 0.72rem;">
+        Recent 30 Attempts
+      </span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table align-middle mb-0" style="font-size: 0.825rem;">
+          <thead>
+            <tr>
+              <th>Account</th>
+              <th>IP Address</th>
+              <th>Status</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in login_logs %}
+            <tr>
+              <td>
+                <span class="fw-semibold" style="color: var(--text-primary);">
+                  {% if log.user %}{{ log.user.username }} ({{ log.user.email }}){% else %}Unknown / Invalid User{% endif %}
                 </span>
-              {% else %}
-                <span style="background:rgba(107,107,138,.12);color:var(--muted);
-                             border:1px solid rgba(107,107,138,.2);border-radius:8px;
-                             font-size:.72rem;font-weight:600;padding:.3em .75em;
-                             display:inline-flex;align-items:center;gap:4px;">
-                  <i class="bi bi-person"></i>User
-                </span>
-              {% endif %}
-            </td>
-            <td class="hide-sm" style="color:var(--muted);font-size:.82rem;">{{ user.created_at.strftime('%d %b %Y') }}</td>
-            <td class="hide-md">
-              <span style="font-weight:700;color:var(--txt);">{{ user.scans|length }}</span>
-            </td>
-            <td>
-              <div class="d-flex gap-1">
-                <form method="POST" action="{{ url_for('admin.toggle_admin', user_id=user.id) }}" class="d-inline">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                  <button class="act-btn" title="Toggle Admin"
-                          style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.25);color:#f59e0b;">
-                    <i class="bi bi-shield-half"></i>
-                  </button>
-                </form>
-                <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" class="d-inline"
-                      onsubmit="return confirm('Delete user {{ user.username }}?')">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                  <button class="act-btn" title="Delete User"
-                          style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.25);color:#ef4444;">
-                    <i class="bi bi-trash3"></i>
-                  </button>
-                </form>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+              </td>
+              <td><span style="font-family: 'JetBrains Mono', monospace;">{{ log.ip_address or '127.0.0.1' }}</span></td>
+              <td>
+                {% if log.status == 'success' %}
+                <span class="badge-status safe" style="font-size: 0.68rem;"><i class="bi bi-check2"></i>Success</span>
+                {% else %}
+                <span class="badge-status phishing" style="font-size: 0.68rem;"><i class="bi bi-x"></i>Failed</span>
+                {% endif %}
+              </td>
+              <td style="color: var(--text-muted);">{{ log.logged_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- ══ RECENT SCANS ══ -->
-<div class="card" style="background:rgba(15,12,40,.8);backdrop-filter:blur(12px);">
-  <div class="card-header d-flex align-items-center justify-content-between">
-    <div class="d-flex align-items-center gap-2">
-      <i class="bi bi-clock-history" style="color:var(--accent);"></i>
-      Recent Scans (All Users)
-    </div>
-    <span style="font-size:.72rem;color:var(--muted);background:rgba(255,255,255,.04);
-                 padding:.25em .7em;border-radius:6px;border:1px solid rgba(255,255,255,.07);">Last 20 scans</span>
-  </div>
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0 admin-table">
-        <thead>
-          <tr><th>User</th><th>URL</th><th>Verdict</th><th>Risk</th><th>Date</th><th>Report</th></tr>
-        </thead>
-        <tbody>
-          {% for scan in recent_scans %}
-          <tr>
-            <td>
-              <div class="d-flex align-items-center gap-2">
-                <div style="width:28px;height:28px;border-radius:8px;flex-shrink:0;
-                            background:linear-gradient(135deg,rgba(124,111,255,.2),rgba(168,85,247,.2));
-                            display:flex;align-items:center;justify-content:center;
-                            font-size:.7rem;font-weight:700;color:var(--accent);">
-                  {{ scan.user.username[0].upper() }}
-                </div>
-                <span class="fw-semibold" style="font-size:.855rem;">{{ scan.user.username }}</span>
-              </div>
-            </td>
-            <td>
-              <span class="d-inline-block text-truncate"
-                    style="max-width:200px;color:var(--muted);font-size:.82rem;vertical-align:middle;"
-                    title="{{ scan.url }}">{{ scan.url }}</span>
-            </td>
-            <td>
-              {% if scan.prediction == 'Safe' %}
-                <span style="background:rgba(16,185,129,.12);color:#10b981;border:1px solid rgba(16,185,129,.25);
-                             border-radius:8px;font-size:.72rem;font-weight:700;padding:.3em .75em;
-                             display:inline-flex;align-items:center;gap:4px;">
-                  <i class="bi bi-shield-check"></i>Safe
-                </span>
-              {% elif scan.prediction == 'Suspicious' %}
-                <span style="background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.25);
-                             border-radius:8px;font-size:.72rem;font-weight:700;padding:.3em .75em;
-                             display:inline-flex;align-items:center;gap:4px;">
-                  <i class="bi bi-exclamation-triangle"></i>Suspicious
-                </span>
-              {% else %}
-                <span style="background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.25);
-                             border-radius:8px;font-size:.72rem;font-weight:700;padding:.3em .75em;
-                             display:inline-flex;align-items:center;gap:4px;">
-                  <i class="bi bi-bug"></i>Phishing
-                </span>
-              {% endif %}
-            </td>
-            <td>
-              <div class="d-flex align-items-center gap-2">
-                <div class="progress flex-grow-1" style="height:5px;min-width:60px;">
-                  <div class="progress-bar" style="width:{{ scan.risk_score }}%;border-radius:99px;
-                    background:{% if scan.risk_score<30 %}linear-gradient(90deg,#10b981,#34d399)
-                    {% elif scan.risk_score<60 %}linear-gradient(90deg,#f59e0b,#fbbf24)
-                    {% else %}linear-gradient(90deg,#ef4444,#f87171){% endif %};"></div>
-                </div>
-                <span style="font-weight:700;font-size:.82rem;
-                  color:{% if scan.risk_score<30 %}#10b981{% elif scan.risk_score<60 %}#f59e0b{% else %}#ef4444{% endif %};">
-                  {{ scan.risk_score }}
-                </span>
-              </div>
-            </td>
-            <td style="color:var(--muted);font-size:.82rem;white-space:nowrap;">
-              {{ scan.scanned_at.strftime('%d %b %Y') }}
-            </td>
-            <td>
-              <a href="{{ url_for('scanner.download_report', scan_id=scan.id) }}"
-                 class="act-btn"
-                 style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.25);color:#ef4444;">
-                <i class="bi bi-file-earmark-pdf"></i>
-              </a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
 </div>
-
-<!-- ══ LOGIN ACTIVITY ══ -->
-<div class="card mt-4" style="background:rgba(15,12,40,.8);backdrop-filter:blur(12px);">
-  <div class="card-header d-flex align-items-center justify-content-between">
-    <div class="d-flex align-items-center gap-2">
-      <i class="bi bi-key-fill" style="color:#f59e0b;"></i>
-      Login Activity
-    </div>
-    <span style="font-size:.72rem;color:var(--muted);background:rgba(255,255,255,.04);
-                 padding:.25em .7em;border-radius:6px;border:1px solid rgba(255,255,255,.07);">Last 30 logins</span>
-  </div>
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0 admin-table">
-        <thead>
-          <tr><th>#</th><th>User</th><th>Email</th><th>Role</th><th>IP Address</th><th>Status</th><th>Date &amp; Time</th></tr>
-        </thead>
-        <tbody>
-          {% for log in login_logs %}
-          <tr>
-            <td style="color:var(--muted);font-size:.82rem;">{{ log.id }}</td>
-            <td>
-              <div class="d-flex align-items-center gap-2">
-                <div style="width:28px;height:28px;border-radius:8px;flex-shrink:0;
-                            background:linear-gradient(135deg,rgba(124,111,255,.2),rgba(168,85,247,.2));
-                            display:flex;align-items:center;justify-content:center;
-                            font-size:.7rem;font-weight:700;color:var(--accent);">
-                  {{ log.user.username[0].upper() }}
-                </div>
-                <span class="fw-semibold" style="font-size:.855rem;">{{ log.user.username }}</span>
-              </div>
-            </td>
-            <td style="color:var(--muted);font-size:.845rem;">{{ log.user.email }}</td>
-            <td>
-              {% if log.user.is_admin %}
-                <span style="background:rgba(245,158,11,.12);color:#f59e0b;
-                             border:1px solid rgba(245,158,11,.25);border-radius:8px;
-                             font-size:.72rem;font-weight:700;padding:.3em .75em;
-                             display:inline-flex;align-items:center;gap:4px;">
-                  <i class="bi bi-shield-fill"></i>Admin
-                </span>
-              {% else %}
-                <span style="background:rgba(107,107,138,.12);color:var(--muted);
-                             border:1px solid rgba(107,107,138,.2);border-radius:8px;
-                             font-size:.72rem;font-weight:600;padding:.3em .75em;
-                             display:inline-flex;align-items:center;gap:4px;">
-                  <i class="bi bi-person"></i>User
-                </span>
-              {% endif %}
-            </td>
-            <td style="color:var(--muted);font-size:.82rem;font-family:monospace;">{{ log.ip_address or '—' }}</td>
-            <td>
-              {% if log.status == 'success' %}
-                <span style="background:rgba(16,185,129,.12);color:#10b981;border:1px solid rgba(16,185,129,.25);
-                             border-radius:8px;font-size:.72rem;font-weight:700;padding:.3em .75em;
-                             display:inline-flex;align-items:center;gap:4px;">
-                  <i class="bi bi-check-circle-fill"></i>Success
-                </span>
-              {% else %}
-                <span style="background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.25);
-                             border-radius:8px;font-size:.72rem;font-weight:700;padding:.3em .75em;
-                             display:inline-flex;align-items:center;gap:4px;">
-                  <i class="bi bi-x-circle-fill"></i>Failed
-                </span>
-              {% endif %}
-            </td>
-            <td style="color:var(--muted);font-size:.82rem;white-space:nowrap;">
-              {{ log.logged_at.strftime('%d %b %Y  %H:%M') }}
-            </td>
-          </tr>
-          {% else %}
-          <tr><td colspan="7" class="text-center" style="color:var(--muted);padding:2rem;">No login activity yet.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-/* ── Animated counters ── */
-document.querySelectorAll('.admin-stat-num[data-target]').forEach(el=>{
-  const target=parseInt(el.dataset.target)||0;
-  if(!target) return;
-  let curr=0; const step=Math.ceil(target/40);
-  const t=setInterval(()=>{
-    curr=Math.min(curr+step,target);
-    el.textContent=curr;
-    if(curr>=target) clearInterval(t);
-  },30);
-});
+let adminCharts = {};
 
-Chart.defaults.color='#6b6b8a';
-Chart.defaults.borderColor='rgba(255,255,255,0.04)';
+function getAdminColors() {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  return {
+    textColor: isLight ? '#64748B' : '#94A3B8',
+    gridColor: isLight ? '#E2E8F0' : 'rgba(255, 255, 255, 0.05)',
+    tooltipBg: isLight ? '#FFFFFF' : '#0D1B2A',
+    tooltipText: isLight ? '#0F172A' : '#F8FAFC',
+    tooltipBorder: isLight ? '#CBD5E1' : 'rgba(0, 229, 255, 0.25)',
+  };
+}
 
-fetch('/admin/api/chart-data').then(r=>r.json()).then(data=>{
-  /* Doughnut */
-  new Chart(document.getElementById('adminDistChart'),{
-    type:'doughnut',
-    data:{
-      labels:data.distribution.labels,
-      datasets:[{
-        data:data.distribution.data,
-        backgroundColor:['rgba(16,185,129,.85)','rgba(245,158,11,.85)','rgba(239,68,68,.85)'],
-        borderColor:['#10b981','#f59e0b','#ef4444'],
-        borderWidth:2, hoverOffset:8,
-        hoverBackgroundColor:['rgba(16,185,129,1)','rgba(245,158,11,1)','rgba(239,68,68,1)'],
-      }]
-    },
-    options:{
-      cutout:'72%',
-      plugins:{
-        legend:{position:'bottom',labels:{padding:16,font:{size:11},usePointStyle:true,pointStyleWidth:8}},
-        tooltip:{backgroundColor:'rgba(10,8,30,.95)',borderColor:'rgba(124,111,255,.3)',borderWidth:1,padding:14,cornerRadius:10}
-      },
-      animation:{animateRotate:true,duration:1000}
-    }
+fetch('/admin/api/chart-data')
+  .then(r => r.json())
+  .then(data => {
+    initAdminCharts(data);
+
+    window.addEventListener('pg_theme_changed', () => {
+      Object.values(adminCharts).forEach(c => c.destroy());
+      adminCharts = {};
+      initAdminCharts(data);
+    });
   });
 
-  /* Bar */
-  const bCtx=document.getElementById('topUsersChart');
-  const g=bCtx.getContext('2d').createLinearGradient(0,0,0,220);
-  g.addColorStop(0,'rgba(124,111,255,.95)');
-  g.addColorStop(1,'rgba(168,85,247,.45)');
-  new Chart(bCtx,{
-    type:'bar',
-    data:{
-      labels:data.top_users.labels,
-      datasets:[{label:'Scans',data:data.top_users.data,backgroundColor:g,
-        borderRadius:10,borderSkipped:false,
-        hoverBackgroundColor:'rgba(168,85,247,1)'}]
-    },
-    options:{
-      plugins:{
-        legend:{display:false},
-        tooltip:{backgroundColor:'rgba(10,8,30,.95)',borderColor:'rgba(124,111,255,.3)',borderWidth:1,padding:14,cornerRadius:10}
+function initAdminCharts(data) {
+  const colors = getAdminColors();
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+
+  // 1. Admin Distribution Doughnut
+  const distEl = document.getElementById('adminDistChart');
+  if (distEl) {
+    adminCharts.dist = new Chart(distEl, {
+      type: 'doughnut',
+      data: {
+        labels: data.distribution.labels,
+        datasets: [{
+          data: data.distribution.data,
+          backgroundColor: ['#16A34A', '#D97706', '#DC2626'],
+          borderColor: isLight ? '#FFFFFF' : '#0D1B2A',
+          borderWidth: 3
+        }]
       },
-      scales:{
-        y:{beginAtZero:true,ticks:{stepSize:1,font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}},
-        x:{grid:{display:false},ticks:{font:{size:11}}}
+      options: {
+        cutout: '74%',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: colors.textColor, font: { size: 10 }, usePointStyle: true }
+          },
+          tooltip: {
+            backgroundColor: colors.tooltipBg,
+            titleColor: colors.tooltipText,
+            bodyColor: colors.tooltipText,
+            borderColor: colors.tooltipBorder,
+            borderWidth: 1
+          }
+        }
+      }
+    });
+  }
+
+  // 2. Top Users Horizontal Bar Chart
+  const userEl = document.getElementById('topUsersChart');
+  if (userEl) {
+    adminCharts.users = new Chart(userEl, {
+      type: 'bar',
+      data: {
+        labels: data.top_users.labels,
+        datasets: [{
+          label: 'Total Scans',
+          data: data.top_users.data,
+          backgroundColor: '#2563EB',
+          borderRadius: 6
+        }]
       },
-      animation:{duration:1000}
-    }
-  });
-});
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: { color: colors.gridColor },
+            ticks: { color: colors.textColor, stepSize: 1 }
+          },
+          y: {
+            grid: { display: false },
+            ticks: { color: colors.textColor }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: colors.tooltipBg,
+            titleColor: colors.tooltipText,
+            bodyColor: colors.tooltipText,
+            borderColor: colors.tooltipBorder,
+            borderWidth: 1
+          }
+        }
+      }
+    });
+  }
+}
 </script>
 {% endblock %}

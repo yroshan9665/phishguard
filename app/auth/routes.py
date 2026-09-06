@@ -76,7 +76,9 @@ def login():
             db.session.commit()
         flash('Invalid email or password.', 'danger')
         return redirect(url_for('auth.login'))
-    return render_template('auth/login.html')
+    # Pass non-admin emails for autocomplete suggestions
+    hint_emails = [u.email for u in User.query.filter_by(is_admin=False).with_entities(User.email).limit(10).all()]
+    return render_template('auth/login.html', hint_emails=hint_emails)
 
 
 @auth_bp.route('/logout')

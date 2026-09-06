@@ -4,16 +4,14 @@ from flask_login import LoginManager
 from flask_bcrypt import Bcrypt
 from flask_wtf.csrf import CSRFProtect
 from config import Config
-
 db            = SQLAlchemy()
 login_manager = LoginManager()
 bcrypt        = Bcrypt()
 csrf          = CSRFProtect()
-
-
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    Config.init_app(app)
 
     db.init_app(app)
     login_manager.init_app(app)

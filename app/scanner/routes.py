@@ -87,7 +87,7 @@ def download_report(scan_id):
     _build_pdf(scan, buf)
     buf.seek(0)
     return send_file(buf, as_attachment=True,
-                     download_name=f'PhishGuard_Report_{scan_id}.pdf',
+                     download_name=f'Phishgaurd_Report_{scan_id}.pdf',
                      mimetype='application/pdf')
 
 
@@ -108,7 +108,7 @@ def _make_header_footer(scan):
         canvas.drawCentredString(2.4*cm, H - 1.94*cm, 'PG')
         canvas.setFillColor(C_WHITE)
         canvas.setFont('Helvetica-Bold', 17)
-        canvas.drawString(3.3*cm, H - 1.65*cm, 'PhishGuard')
+        canvas.drawString(3.3*cm, H - 1.65*cm, 'Phishgaurd AI')
         canvas.setFont('Helvetica', 9)
         canvas.setFillColor(C_MUTED)
         canvas.drawString(3.3*cm, H - 2.1*cm, 'Security Analysis Report')
@@ -127,7 +127,7 @@ def _make_header_footer(scan):
         canvas.rect(0, 0, W, 1.1*cm, fill=1, stroke=0)
         canvas.setFillColor(C_MUTED)
         canvas.setFont('Helvetica', 7.5)
-        canvas.drawString(1.8*cm, 0.42*cm, 'PhishGuard \u00b7 Confidential Security Report')
+        canvas.drawString(1.8*cm, 0.42*cm, 'Phishgaurd AI \u00b7 Confidential Security Report')
         canvas.drawRightString(W - 1.8*cm, 0.42*cm,
                                f'Page {doc.page} \u00b7 {datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")}')
         canvas.restoreState()

@@ -1,238 +1,390 @@
 {% extends "base.html" %}
-{% block title %}Scan Result — PhishGuard AI{% endblock %}
-{% block extra_head %}{% endblock %}
+{% block title %}Scan Analysis: {{ scan.url }} — Phishgaurd AI{% endblock %}
+
+{% set is_safe = scan.prediction == 'Safe' %}
+{% set is_susp = scan.prediction == 'Suspicious' %}
+{% set verdict_color = 'var(--status-safe)' if is_safe else ('var(--status-suspicious)' if is_susp else 'var(--status-phishing)') %}
+{% set verdict_bg = 'var(--status-safe-bg)' if is_safe else ('var(--status-suspicious-bg)' if is_susp else 'var(--status-phishing-bg)') %}
+{% set verdict_border = 'var(--status-safe-border)' if is_safe else ('var(--status-suspicious-border)' if is_susp else 'var(--status-phishing-border)') %}
+
+{% block extra_head %}
+<style>
+  .verdict-hero-card {
+    border-radius: 24px;
+    background: var(--bg-card);
+    border: 1px solid {{ verdict_border }};
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.4), 0 0 30px {{ verdict_bg }};
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .verdict-top-strip {
+    height: 4px;
+    background: {{ verdict_color }};
+  }
+  .verdict-icon-container {
+    width: 78px; height: 78px;
+    border-radius: 22px;
+    background: {{ verdict_bg }};
+    border: 1px solid {{ verdict_border }};
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.2rem;
+    color: {{ verdict_color }};
+    flex-shrink: 0;
+  }
+
+  .score-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border-subtle);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-top: 1.5rem;
+  }
+  .score-metric-cell {
+    background: var(--bg-secondary);
+    padding: 1.2rem 1rem;
+    text-align: center;
+  }
+  .score-metric-val {
+    font-family: 'Outfit', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .score-metric-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-top: 0.35rem;
+  }
+
+  .feature-table-row {
+    transition: background-color 0.15s ease;
+  }
+  .feature-table-row:hover {
+    background-color: var(--bg-card-hover);
+  }
+  .feature-value-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    padding: 0.2em 0.6em;
+    border-radius: 6px;
+    background: var(--code-bg);
+    color: var(--accent-cyan);
+  }
+  [data-theme="light"] .feature-value-badge {
+    color: var(--accent-blue);
+  }
+
+  @media (max-width: 767.98px) {
+    .score-metrics-grid { grid-template-columns: 1fr; }
+    .verdict-hero-inner { flex-direction: column; text-align: center; }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
+<div class="fade-in">
 
-{% set is_safe      = scan.prediction == 'Safe' %}
-{% set is_susp      = scan.prediction == 'Suspicious' %}
-{% set color_hex    = '#10b981' if is_safe else ('#f59e0b' if is_susp else '#ef4444') %}
-{% set color_name   = 'success' if is_safe else ('warning' if is_susp else 'danger') %}
-{% set icon_cls     = 'bi-shield-fill-check' if is_safe else ('bi-exclamation-triangle-fill' if is_susp else 'bi-bug-fill') %}
-
-<!-- Page Header -->
-<div class="page-header">
-  <div>
-    <h4 class="fw-bold mb-0" style="font-family:'Space Grotesk',sans-serif;">Scan Result</h4>
-    <p class="mb-0" style="font-size:0.82rem;color:var(--text-muted);">
-      {{ scan.scanned_at.strftime('%d %B %Y at %H:%M UTC') }}
-    </p>
+  <!-- ══ PAGE HEADER ══ -->
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <a href="{{ url_for('dashboard.index') }}" class="text-decoration-none" style="color: var(--text-muted); font-size: 0.85rem;">
+          <i class="bi bi-arrow-left me-1"></i>Dashboard
+        </a>
+        <span style="color: var(--border-subtle);">&bull;</span>
+        <span style="font-size: 0.85rem; color: var(--text-muted);">Scan Report #{{ scan.id }}</span>
+      </div>
+      <h1 class="fw-bold mb-0" style="font-size: 1.6rem; font-family: 'Outfit', sans-serif;">Security Threat Assessment</h1>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a href="{{ url_for('scanner.scan') }}" class="btn btn-sm btn-cyber-ghost">
+        <i class="bi bi-plus-lg me-1"></i>New Scan
+      </a>
+      <button class="btn btn-sm btn-cyber-ghost" id="copyShareBtn" onclick="navigator.clipboard.writeText(window.location.href); this.innerHTML='<i class=\'bi bi-check2 me-1\'></i>Copied!'; setTimeout(() => this.innerHTML='<i class=\'bi bi-share me-1\'></i>Share', 2000);">
+        <i class="bi bi-share me-1"></i>Share
+      </button>
+      <a href="{{ url_for('scanner.download_report', scan_id=scan.id) }}" class="btn btn-sm btn-cyber-danger">
+        <i class="bi bi-file-earmark-pdf-fill me-1"></i>Download PDF
+      </a>
+    </div>
   </div>
-  <div class="d-flex gap-2">
-    <a href="{{ url_for('scanner.scan') }}" class="btn btn-outline-secondary btn-sm" style="border-radius:10px;">
-      <i class="bi bi-arrow-left me-1"></i>New Scan
-    </a>
-    <a href="{{ url_for('scanner.download_report', scan_id=scan.id) }}" class="btn btn-sm fw-semibold"
-       style="border-radius:10px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;">
-      <i class="bi bi-file-earmark-pdf me-1"></i>PDF Report
-    </a>
-  </div>
-</div>
 
-<!-- ── Verdict Banner ── -->
-<div class="card mb-4" style="border-color:{{ color_hex }}40;background:{{ color_hex }}08;">
-  <div class="card-body p-4">
-    <div class="row align-items-center g-3">
-      <div class="col-auto">
-        <div style="width:72px;height:72px;border-radius:20px;background:{{ color_hex }}15;
-                    border:1px solid {{ color_hex }}40;
-                    display:flex;align-items:center;justify-content:center;">
-          <i class="bi {{ icon_cls }}" style="font-size:2.2rem;color:{{ color_hex }};"></i>
+  <!-- ══ VERDICT HERO BANNER ══ -->
+  <div class="verdict-hero-card">
+    <div class="verdict-top-strip"></div>
+    <div class="p-4 p-lg-5">
+      <div class="d-flex align-items-center gap-4 verdict-hero-inner mb-4">
+        <div class="verdict-icon-container">
+          <i class="bi {% if is_safe %}bi-shield-fill-check{% elif is_susp %}bi-exclamation-triangle-fill{% else %}bi-bug-fill{% endif %}"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div style="font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px;">
+            VERDICT CLASSIFICATION
+          </div>
+          <div class="d-flex align-items-center gap-3 flex-wrap">
+            <h2 class="fw-bold mb-0" style="font-size: 2.2rem; color: {{ verdict_color }};">
+              {{ scan.prediction }}
+            </h2>
+            <span class="badge-status {% if is_safe %}safe{% elif is_susp %}suspicious{% else %}phishing{% endif %}">
+              {% if is_safe %}Safe Verified{% elif is_susp %}Suspicious Indicators{% else %}Phishing Detected{% endif %}
+            </span>
+          </div>
+          <div class="mt-2" style="word-break: break-all; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--text-secondary);">
+            <i class="bi bi-link-45deg me-1"></i>{{ scan.url }}
+          </div>
         </div>
       </div>
-      <div class="col">
-        <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">
-          AI Verdict
+
+      <!-- Scoreboard Grid -->
+      <div class="score-metrics-grid">
+        <div class="score-metric-cell">
+          <div class="score-metric-val" style="color: {{ verdict_color }};" id="confCount">
+            {{ scan.confidence }}%
+          </div>
+          <div class="score-metric-label">Model Confidence</div>
         </div>
-        <div style="font-size:1.8rem;font-weight:800;color:{{ color_hex }};font-family:'Space Grotesk',sans-serif;line-height:1.1;">
-          {{ scan.prediction }}
+        <div class="score-metric-cell">
+          <div class="score-metric-val" style="color: {{ verdict_color }};" id="riskCount">
+            {{ scan.risk_score }}<span style="font-size: 1.1rem; color: var(--text-muted); font-weight: 500;">/100</span>
+          </div>
+          <div class="score-metric-label">Calculated Risk Index</div>
         </div>
-        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:4px;word-break:break-all;">
-          {{ scan.url }}
+        <div class="score-metric-cell">
+          <div class="score-metric-val">
+            {% if scan.features %}{{ scan.features|length }}{% else %}15{% endif %}
+          </div>
+          <div class="score-metric-label">Signals Extracted</div>
         </div>
-      </div>
-      <div class="col-auto text-center d-none d-md-block" style="border-left:1px solid {{ color_hex }}20;padding-left:1.5rem;">
-        <div style="font-size:2rem;font-weight:800;color:{{ color_hex }};font-family:'Space Grotesk',sans-serif;">
-          {{ scan.confidence }}%
-        </div>
-        <div style="font-size:0.75rem;color:var(--text-muted);">Confidence</div>
-      </div>
-      <div class="col-auto text-center d-none d-md-block" style="border-left:1px solid {{ color_hex }}20;padding-left:1.5rem;">
-        <div style="font-size:2rem;font-weight:800;color:{{ color_hex }};font-family:'Space Grotesk',sans-serif;">
-          {{ scan.risk_score }}
-        </div>
-        <div style="font-size:0.75rem;color:var(--text-muted);">Risk / 100</div>
       </div>
     </div>
   </div>
-</div>
 
-<div class="row g-4">
-
-  <!-- ── Risk Gauge ── -->
-  <div class="col-lg-4">
-    <div class="card h-100">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="bi bi-speedometer2" style="color:var(--accent);"></i>
-        Risk Gauge
+  <!-- ══ TWO COLUMN: GAUGE & RECOMMENDATIONS vs SIGNAL BREAKDOWN ══ -->
+  <div class="row g-4 mb-4">
+    <!-- Left Column: Risk Gauge & Recommendations -->
+    <div class="col-lg-5">
+      <!-- Risk Gauge Card -->
+      <div class="card mb-4">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-speedometer2" style="color: var(--accent-cyan);"></i>
+            <span>Threat Score Gauge</span>
+          </div>
+          <span class="badge" style="background: var(--bg-card-subtle); color: var(--text-secondary); border: 1px solid var(--border-subtle); font-size: 0.72rem;">
+            Score: {{ scan.risk_score }}/100
+          </span>
+        </div>
+        <div class="card-body text-center py-4">
+          <div style="width: 200px; height: 120px; margin: 0 auto; position: relative;">
+            <canvas id="gaugeCanvas" width="200" height="120"></canvas>
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; text-align: center;">
+              <div style="font-family: 'Outfit', sans-serif; font-size: 1.8rem; font-weight: 900; color: {{ verdict_color }}; line-height: 1;">
+                {{ scan.risk_score }}
+              </div>
+              <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em;">
+                {% if scan.risk_score < 30 %}LOW RISK{% elif scan.risk_score < 60 %}MODERATE RISK{% else %}CRITICAL THREAT{% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
-        <canvas id="gaugeChart" width="220" height="220"></canvas>
-        <div class="mt-3 text-center">
-          <div style="font-size:0.78rem;color:var(--text-muted);">
-            {% if scan.risk_score < 30 %}Low Risk
-            {% elif scan.risk_score < 60 %}Moderate Risk
-            {% else %}High Risk{% endif %}
+
+      <!-- Security Guidance Card -->
+      <div class="card">
+        <div class="card-header d-flex align-items-center gap-2">
+          <i class="bi bi-shield-exclamation" style="color: var(--accent-blue);"></i>
+          <span>Security Recommendations</span>
+        </div>
+        <div class="card-body">
+          {% if scan.prediction == 'Phishing' %}
+          <div class="d-flex align-items-start gap-2 mb-3 text-danger">
+            <i class="bi bi-x-octagon-fill fs-5 mt-1"></i>
+            <div>
+              <strong style="color: var(--status-phishing);">DO NOT interact or enter credentials</strong>
+              <p class="mb-0 text-secondary" style="font-size: 0.825rem;">This site exhibits classic characteristics of credential harvesting or brand impersonation.</p>
+            </div>
+          </div>
+          <div class="d-flex align-items-start gap-2 mb-2">
+            <i class="bi bi-arrow-right-circle text-info mt-1"></i>
+            <span style="font-size: 0.825rem; color: var(--text-secondary);">If you submitted credentials, immediately reset your password and revoke active sessions.</span>
+          </div>
+          <div class="d-flex align-items-start gap-2">
+            <i class="bi bi-arrow-right-circle text-info mt-1"></i>
+            <span style="font-size: 0.825rem; color: var(--text-secondary);">Report this target URL to Google Safe Browsing and your IT security officer.</span>
+          </div>
+          {% elif scan.prediction == 'Suspicious' %}
+          <div class="d-flex align-items-start gap-2 mb-3 text-warning">
+            <i class="bi bi-exclamation-triangle-fill fs-5 mt-1"></i>
+            <div>
+              <strong style="color: var(--status-suspicious);">Exercise extreme caution</strong>
+              <p class="mb-0 text-secondary" style="font-size: 0.825rem;">Signals suggest brand variation or anomalous page mechanics. Verify domain ownership.</p>
+            </div>
+          </div>
+          <div class="d-flex align-items-start gap-2">
+            <i class="bi bi-arrow-right-circle text-info mt-1"></i>
+            <span style="font-size: 0.825rem; color: var(--text-secondary);">Do not authorize OAuth popups or input sensitive payment tokens without out-of-band verification.</span>
+          </div>
+          {% else %}
+          <div class="d-flex align-items-start gap-2 mb-3 text-success">
+            <i class="bi bi-check-circle-fill fs-5 mt-1"></i>
+            <div>
+              <strong style="color: var(--status-safe);">Site verified clean</strong>
+              <p class="mb-0 text-secondary" style="font-size: 0.825rem;">No deceptive signals detected. The URL matches standard legitimate patterns.</p>
+            </div>
+          </div>
+          <div class="d-flex align-items-start gap-2">
+            <i class="bi bi-shield-check text-success mt-1"></i>
+            <span style="font-size: 0.825rem; color: var(--text-secondary);">Always ensure your browser maintains a secure HTTPS lock before submitting account passwords.</span>
+          </div>
+          {% endif %}
+
+          <div class="mt-3 pt-3 border-top" style="border-color: var(--border-subtle) !important;">
+            <div class="d-flex align-items-center gap-2 mb-1" style="font-size: 0.8rem; font-weight: 700; color: var(--accent-cyan);">
+              <i class="bi bi-envelope-shield"></i>
+              <span>Email & Mail Inbox Recommendation:</span>
+            </div>
+            <p class="mb-0 text-secondary" style="font-size: 0.78rem;">
+              If this URL was received via an email, check whether the sender's domain matches official DNS records (SPF/DKIM). Never click links in emails demanding urgent credential updates.
+            </p>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- ── Features Table ── -->
-  <div class="col-lg-8">
-    <div class="card h-100">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="bi bi-list-check" style="color:var(--accent);"></i>
-        Extracted Features
-      </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead>
-              <tr><th>Feature</th><th>Value</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              {% if scan.features %}
-                {% set feat = scan.features %}
-                {% set rows = [
-                  ('URL Length',          feat.get('url_length','-'),          feat.get('url_length',0) < 75),
-                  ('HTTPS',               feat.get('has_https','-'),            feat.get('has_https',0) == 1),
-                  ('IP as Domain',        feat.get('has_ip','-'),               feat.get('has_ip',0) == 0),
-                  ('Subdomain Count',     feat.get('subdomain_count','-'),      feat.get('subdomain_count',0) <= 1),
-                  ('Special Characters',  feat.get('special_char_count','-'),   feat.get('special_char_count',0) < 3),
-                  ('Suspicious Keywords', feat.get('suspicious_keywords','-'),  feat.get('suspicious_keywords',0) < 2),
-                  ('Dot Count',           feat.get('dot_count','-'),            feat.get('dot_count',0) < 5),
-                  ('@ in URL',            feat.get('has_at_symbol','-'),        feat.get('has_at_symbol',0) == 0),
-                  ('Domain Age (days)',   feat.get('domain_age_days','-'),      feat.get('domain_age_days',-1) > 180),
-                  ('SSL Valid',           feat.get('ssl_valid','-'),            feat.get('ssl_valid',0) == 1),
-                  ('Login Form',          feat.get('has_login_form','-'),       feat.get('has_login_form',0) == 0),
-                  ('External Links',      feat.get('external_links','-'),       feat.get('external_links',0) < 20),
-                  ('Hidden Elements',     feat.get('hidden_elements','-'),      feat.get('hidden_elements',0) == 0),
-                  ('Redirect Count',      feat.get('redirect_count','-'),       feat.get('redirect_count',0) < 2),
-                  ('Suspicious JS',       feat.get('has_suspicious_js','-'),    feat.get('has_suspicious_js',0) == 0),
-                ] %}
-                {% for name, value, safe in rows %}
+    <!-- Right Column: 15 Extracted Features Inspection Table -->
+    <div class="col-lg-7">
+      <div class="card h-100">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-list-check" style="color: var(--accent-cyan);"></i>
+            <span>Extracted Feature Breakdown</span>
+          </div>
+          <span class="badge" style="background: var(--bg-card-subtle); color: var(--text-secondary); border: 1px solid var(--border-subtle); font-size: 0.72rem;">
+            15 Heuristics
+          </span>
+        </div>
+        <div class="card-body p-0">
+          {% if scan.features %}
+          {% set feature_labels = {
+            'url_length': 'URL Character Length',
+            'has_https': 'HTTPS Protocol Enabled',
+            'has_ip': 'IP Address in Hostname',
+            'subdomain_count': 'Subdomain Hierarchy Depth',
+            'special_char_count': 'Special Symbol Density',
+            'suspicious_keywords': 'Deceptive Keyword Matches',
+            'dot_count': 'Dot (.) Count in URL',
+            'has_at_symbol': '@ Symbol in URL',
+            'domain_age_days': 'Domain Age (Days Registered)',
+            'ssl_valid': 'SSL/TLS Certificate Validity',
+            'has_login_form': 'Password/Login Form Present',
+            'external_links': 'External Resource Link Count',
+            'hidden_elements': 'Hidden DOM Element Count',
+            'redirect_count': 'HTTP Redirect Chain Depth',
+            'has_suspicious_js': 'Obfuscated / Suspicious Scripts'
+          } %}
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead>
                 <tr>
-                  <td style="font-size:0.875rem;">{{ name }}</td>
-                  <td><code>{{ value }}</code></td>
+                  <th>Signal Metric</th>
+                  <th>Observed Value</th>
+                  <th class="text-end">Evaluation</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for k, v in scan.features.items() %}
+                {% set is_ok = (
+                  (k == 'url_length' and v < 75) or
+                  (k == 'has_https' and v == 1) or
+                  (k == 'has_ip' and v == 0) or
+                  (k == 'subdomain_count' and v <= 1) or
+                  (k == 'special_char_count' and v < 3) or
+                  (k == 'suspicious_keywords' and v < 2) or
+                  (k == 'dot_count' and v < 5) or
+                  (k == 'has_at_symbol' and v == 0) or
+                  (k == 'domain_age_days' and v > 180) or
+                  (k == 'ssl_valid' and v == 1) or
+                  (k == 'has_login_form' and v == 0) or
+                  (k == 'external_links' and v < 20) or
+                  (k == 'hidden_elements' and v == 0) or
+                  (k == 'redirect_count' and v < 2) or
+                  (k == 'has_suspicious_js' and v == 0)
+                ) %}
+                <tr class="feature-table-row">
                   <td>
-                    {% if safe %}
-                      <span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.25);">
-                        <i class="bi bi-check-lg me-1"></i>OK
-                      </span>
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
+                      {{ feature_labels.get(k, k.replace('_', ' ').title()) }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="feature-value-badge">{{ v }}</span>
+                  </td>
+                  <td class="text-end">
+                    {% if is_ok %}
+                    <span class="badge-status safe" style="font-size: 0.7rem;"><i class="bi bi-check-lg"></i>Pass</span>
                     {% else %}
-                      <span class="badge" style="background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.25);">
-                        <i class="bi bi-x-lg me-1"></i>Risk
-                      </span>
+                    <span class="badge-status phishing" style="font-size: 0.7rem;"><i class="bi bi-exclamation-triangle"></i>Risk</span>
                     {% endif %}
                   </td>
                 </tr>
                 {% endfor %}
-              {% endif %}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
+          {% endif %}
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- ── Recommendations ── -->
-<div class="card mt-4">
-  <div class="card-header d-flex align-items-center gap-2">
-    <i class="bi bi-lightbulb-fill" style="color:#f59e0b;"></i>
-    Security Recommendations
-  </div>
-  <div class="card-body">
-    {% if scan.prediction == 'Phishing' %}
-      <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
-        <i class="bi bi-x-circle-fill fs-5"></i>
-        <strong>DO NOT visit or interact with this website.</strong>
-      </div>
-      <ul class="mb-0" style="color:var(--text-muted);font-size:0.875rem;line-height:2;">
-        <li>Report this URL to Google Safe Browsing and your ISP immediately.</li>
-        <li>If you entered any credentials, change them right away.</li>
-        <li>Run a malware scan on your device.</li>
-        <li>Enable two-factor authentication on important accounts.</li>
-      </ul>
-    {% elif scan.prediction == 'Suspicious' %}
-      <div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
-        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
-        <strong>Exercise caution when visiting this site.</strong>
-      </div>
-      <ul class="mb-0" style="color:var(--text-muted);font-size:0.875rem;line-height:2;">
-        <li>Do not enter passwords, credit card details, or personal information.</li>
-        <li>Verify the site's legitimacy through official channels before proceeding.</li>
-        <li>Check the domain spelling carefully — phishers often use lookalike domains.</li>
-      </ul>
-    {% else %}
-      <div class="alert alert-success d-flex align-items-center gap-2 mb-3">
-        <i class="bi bi-shield-fill-check fs-5"></i>
-        <strong>This site appears safe based on current analysis.</strong>
-      </div>
-      <ul class="mb-0" style="color:var(--text-muted);font-size:0.875rem;line-height:2;">
-        <li>Always verify the domain before entering sensitive credentials.</li>
-        <li>Keep your browser and antivirus software up to date.</li>
-        <li>AI analysis is not 100% foolproof — stay vigilant.</li>
-      </ul>
-    {% endif %}
-  </div>
 </div>
-
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-Chart.defaults.color = '#7a7a9a';
-const risk  = {{ scan.risk_score }};
-const color = risk < 30 ? '#10b981' : risk < 60 ? '#f59e0b' : '#ef4444';
-const track = 'rgba(255,255,255,0.06)';
+/* ── Confetti for Safe verdict ── */
+{% if is_safe %}
+if (window.pgConfetti) {
+  setTimeout(() => window.pgConfetti(65), 300);
+}
+{% endif %}
 
-new Chart(document.getElementById('gaugeChart'), {
-  type: 'doughnut',
-  data: {
-    datasets: [{
-      data: [risk, 100 - risk],
-      backgroundColor: [color, track],
-      borderWidth: 0,
-      hoverOffset: 0
-    }]
-  },
-  options: {
-    cutout: '74%',
-    rotation: -90,
-    circumference: 180,
-    plugins: {
-      legend: { display: false },
-      tooltip: { enabled: false }
-    }
-  },
-  plugins: [{
-    id: 'centerText',
-    afterDraw(chart) {
-      const { ctx, chartArea: { width, top, height } } = chart;
-      ctx.save();
-      ctx.font = "bold 2.2rem 'Space Grotesk', sans-serif";
-      ctx.fillStyle = color;
-      ctx.textAlign = 'center';
-      ctx.fillText(risk, width / 2, top + height * 0.78);
-      ctx.font = "0.78rem 'Inter', sans-serif";
-      ctx.fillStyle = '#7a7a9a';
-      ctx.fillText('Risk Score', width / 2, top + height * 0.94);
-      ctx.restore();
-    }
-  }]
-});
+/* ── Render Semicircle Risk Gauge ── */
+function drawGauge() {
+  const canvas = document.getElementById('gaugeCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const score = {{ scan.risk_score }};
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+
+  const cx = 100, cy = 110, r = 80;
+
+  // Background track arc
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, Math.PI, 0, false);
+  ctx.strokeStyle = isLight ? '#E2E8F0' : 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 14;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Active score arc
+  const endAngle = Math.PI + (score / 100) * Math.PI;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, Math.PI, endAngle, false);
+  ctx.strokeStyle = score < 30 ? '#16A34A' : (score < 60 ? '#D97706' : '#DC2626');
+  ctx.lineWidth = 14;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+
+drawGauge();
+window.addEventListener('pg_theme_changed', drawGauge);
 </script>
 {% endblock %}

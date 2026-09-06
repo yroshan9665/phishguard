@@ -1,504 +1,846 @@
 {% extends "base.html" %}
-{% block title %}Sign In — PhishGuard AI{% endblock %}
+{% block title %}Phishgaurd AI{% endblock %}
 {% block container_class %}{% endblock %}
 
 {% block extra_head %}
 <style>
-  /* ── Full-screen layout ── */
-  .login-outer {
-    position: fixed; inset: 0; display: flex;
-    background: #07071a;
+  .landing-page-wrap {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: transparent !important;
+    color: var(--text-primary);
+    position: relative;
+    z-index: 1;
+  }
+
+  .landing-nav {
+    position: sticky; top: 0; z-index: 1000;
+    background: var(--navbar-bg) !important;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid var(--navbar-border);
+    padding: 0.85rem 0;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.35);
+  }
+  .landing-nav .nav-link,
+  .landing-nav .btn {
+    white-space: nowrap !important;
+    flex-shrink: 0;
+  }
+
+  /* Hero Section (Fold 1 - Details First) */
+  .landing-hero-fullscreen {
+    min-height: calc(100vh - 75px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 3.5rem 1.5rem 2.5rem;
+    position: relative;
+  }
+
+  .hero-shield-halo {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 229, 255, 0.4) 0%, rgba(37, 99, 235, 0.22) 50%, transparent 75%);
+    filter: blur(28px);
+    z-index: 0;
+    animation: haloPulse 3.5s ease-in-out infinite alternate;
+  }
+  [data-theme="light"] .hero-shield-halo {
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.2) 0%, rgba(2, 132, 199, 0.1) 50%, transparent 75%) !important;
+    filter: blur(20px) !important;
+  }
+  @keyframes haloPulse {
+    0%   { transform: translate(-50%, -50%) scale(0.9); opacity: 0.7; }
+    100% { transform: translate(-50%, -50%) scale(1.18); opacity: 1; }
+  }
+
+  .hero-shield-img {
+    height: 135px;
+    width: auto;
+    position: relative;
+    z-index: 2;
+    filter: drop-shadow(0 0 30px rgba(0, 229, 255, 0.8));
+    animation: shieldFloat 4s ease-in-out infinite alternate;
+  }
+  [data-theme="light"] .hero-shield-img {
+    filter: drop-shadow(0 12px 24px rgba(37, 99, 235, 0.35)) !important;
+  }
+  @keyframes shieldFloat {
+    0%   { transform: translateY(0px); }
+    100% { transform: translateY(-8px); }
+  }
+
+  .hero-main-title {
+    font-size: 3.4rem;
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .hero-subtitle {
+    font-size: 1.15rem;
+    color: var(--text-secondary);
+    max-width: 680px;
+    margin: 0 auto 2rem;
+    line-height: 1.6;
+  }
+
+  /* Metric Stat Badges */
+  .hero-stat-pill {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 16px;
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 130px;
+    box-shadow: var(--shadow-card);
+    transition: transform 0.25s ease, border-color 0.25s ease;
+  }
+  .hero-stat-pill:hover {
+    transform: translateY(-3px);
+    border-color: var(--border-focus);
+  }
+  .hero-stat-num {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: 3px;
+  }
+  .hero-stat-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* Fold 2 - Feature Spotlight Section */
+  .landing-spotlight-section {
+    padding: 4.5rem 1.5rem;
+    background: rgba(10, 22, 38, 0.55);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    position: relative;
+  }
+  [data-theme="light"] .landing-spotlight-section {
+    background: rgba(245, 247, 250, 0.85);
+  }
+
+  .spotlight-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 22px;
+    padding: 2.2rem 1.75rem;
+    height: 100%;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    position: relative;
     overflow: hidden;
   }
-
-  /* ── Canvas bg ── */
-  #bgCanvas { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
-
-  /* ── Grid overlay ── */
-  .login-outer::after {
-    content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-    background-image:
-      linear-gradient(rgba(124,111,255,.055) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(124,111,255,.055) 1px, transparent 1px);
-    background-size: 52px 52px;
+  .spotlight-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3.5px;
+    background: linear-gradient(90deg, #00E5FF, #2563EB);
   }
-
-  /* ── LEFT panel ── */
-  .lp-left {
-    flex: 1; position: relative; z-index: 1;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 3rem 2rem;
+  .spotlight-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-elevated);
+    border-color: var(--border-focus);
   }
-
-  /* shield container */
-  .shield-scene {
-    position: relative; width: 220px; height: 220px;
-    margin: 0 auto 2.4rem; flex-shrink: 0;
-  }
-  /* glow blob */
-  .shield-scene::before {
-    content: ''; position: absolute;
-    inset: -40px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(124,111,255,.35) 0%, rgba(6,182,212,.15) 50%, transparent 70%);
-    animation: glowPulse 3s ease-in-out infinite;
-  }
-  /* outer dashed ring */
-  .s-ring {
-    position: absolute; border-radius: 50%;
-    border: 1.5px dashed rgba(124,111,255,.45);
-    animation: ringCW 12s linear infinite;
-  }
-  .s-ring::after {
-    content: ''; position: absolute; top: -5px; left: 50%;
-    transform: translateX(-50%);
-    width: 9px; height: 9px; border-radius: 50%;
-    background: #7c6fff;
-    box-shadow: 0 0 12px 3px rgba(124,111,255,.9);
-  }
-  .sr1 { inset: -14px; }
-  .sr2 {
-    inset: -34px;
-    border-color: rgba(6,182,212,.35);
-    animation: ringCCW 18s linear infinite;
-  }
-  .sr2::after {
-    background: #06b6d4;
-    box-shadow: 0 0 12px 3px rgba(6,182,212,.9);
-    top: auto; bottom: -5px;
-  }
-
-  /* shield SVG wrapper */
-  .shield-svg-wrap {
-    position: absolute; inset: 0;
+  .spotlight-icon-box {
+    width: 52px; height: 52px;
+    border-radius: 14px;
     display: flex; align-items: center; justify-content: center;
-    z-index: 2;
+    font-size: 1.5rem;
+    margin-bottom: 1.25rem;
   }
 
-  /* text block */
-  .lp-title {
-    font-size: 2.2rem; font-weight: 900; color: #fff;
-    line-height: 1.2; text-align: center; margin-bottom: .8rem;
+  /* Intelligence Matrix Grid */
+  .signal-grid-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s ease;
   }
-  .lp-title span {
-    background: linear-gradient(90deg, #a855f7, #06b6d4);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  }
-  .lp-sub {
-    font-size: .9rem; color: rgba(255,255,255,.42);
-    line-height: 1.7; text-align: center;
-    max-width: 300px; margin: 0 auto 1.8rem;
-  }
-  .feat-pills { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; }
-  .fpill {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: .78rem; font-weight: 600;
-    padding: .38em 1em; border-radius: 50px;
-    border: 1px solid; backdrop-filter: blur(8px);
-  }
-
-  /* ── RIGHT card panel ── */
-  .lp-right {
-    width: 420px; flex-shrink: 0; position: relative; z-index: 1;
-    display: flex; align-items: center; justify-content: center;
-    padding: 2rem 1.5rem;
-  }
-
-  .login-card {
-    width: 100%; max-width: 360px;
-    background: rgba(10,9,30,.92);
-    border: 1px solid rgba(124,111,255,.22);
-    border-radius: 24px;
-    padding: 0 0 1.6rem;
-    box-shadow: 0 32px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(124,111,255,.06) inset;
-    backdrop-filter: blur(28px);
-  }
-
-  /* top accent line */
-  .card-line {
-    height: 3px;
-    background: linear-gradient(90deg, #7c6fff, #a855f7, #06b6d4);
-    margin-bottom: 2rem;
-  }
-
-  .card-body-inner { padding: 0 2rem; }
-
-  /* logo icon */
-  .card-logo {
-    width: 64px; height: 64px; border-radius: 20px;
-    background: linear-gradient(135deg, #7c6fff, #a855f7 55%, #06b6d4);
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 1.1rem;
-    box-shadow: 0 8px 32px rgba(124,111,255,.5);
-    animation: logoPulse 2.8s ease-in-out infinite;
-  }
-
-  .card-title {
-    font-size: 1.55rem; font-weight: 800; color: #fff;
-    text-align: center; margin-bottom: 4px;
-  }
-  .card-sub {
-    font-size: .85rem; color: rgba(255,255,255,.38);
-    text-align: center; margin-bottom: 1.6rem;
-  }
-  .card-sub span {
-    background: linear-gradient(90deg, #a78bfa, #06b6d4);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    font-weight: 700;
-  }
-  .admin-mode .card-sub span {
-    background: linear-gradient(90deg, #ef4444, #f97316);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    font-weight: 700;
-  }
-
-  /* field labels */
-  .f-label {
-    font-size: .78rem; color: rgba(255,255,255,.55);
-    margin-bottom: .4rem; display: block;
-  }
-
-  /* input rows */
-  .f-wrap {
-    display: flex; align-items: center;
-    background: rgba(255,255,255,.04);
-    border: 1px solid rgba(255,255,255,.09);
-    border-radius: 12px; height: 48px;
-    transition: border-color .2s, box-shadow .2s;
-    overflow: hidden; margin-bottom: 1rem;
-  }
-  .f-wrap:focus-within {
-    border-color: rgba(124,111,255,.65);
-    box-shadow: 0 0 0 3px rgba(124,111,255,.13);
-    background: rgba(124,111,255,.05);
-  }
-  .f-icon {
-    width: 44px; display: flex; align-items: center; justify-content: center;
-    color: rgba(124,111,255,.7); font-size: .88rem; flex-shrink: 0;
-  }
-  .f-wrap input {
-    flex: 1; background: transparent; border: none; outline: none;
-    color: #e0e0e0; font-size: .9rem; height: 100%; padding: 0 10px;
-  }
-  .f-wrap input::placeholder { color: rgba(107,107,138,.45); }
-  .eye-tog {
-    width: 44px; height: 100%; background: none; border: none;
-    cursor: pointer; color: rgba(124,111,255,.55); font-size: .95rem;
-    display: flex; align-items: center; justify-content: center;
-    transition: color .2s; flex-shrink: 0;
-  }
-  .eye-tog:hover { color: #a855f7; }
-
-  /* remember / forgot row */
-  .row-rf {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 1.2rem;
-  }
-  .form-check-input { background-color: rgba(255,255,255,.07); border-color: rgba(255,255,255,.2); }
-  .form-check-input:checked { background-color: #7c6fff; border-color: #7c6fff; }
-  .form-check-label { font-size: .8rem; color: rgba(255,255,255,.42); }
-  .forgot-lnk {
-    font-size: .8rem; color: rgba(255,255,255,.35);
-    text-decoration: none; display: flex; align-items: center; gap: 4px;
-    transition: color .2s;
-  }
-  .forgot-lnk:hover { color: #a78bfa; }
-
-  /* sign-in button */
-  .signin-btn {
-    height: 50px; width: 100%; border-radius: 13px;
-    font-size: 1rem; font-weight: 700; letter-spacing: .2px;
-    background: linear-gradient(135deg, #7c6fff 0%, #a855f7 60%, #06b6d4 100%);
-    border: none; color: #fff; cursor: pointer;
-    box-shadow: 0 6px 28px rgba(124,111,255,.5);
-    transition: transform .22s, box-shadow .22s;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    margin-bottom: .75rem;
-  }
-  .signin-btn:hover {
+  .signal-grid-card:hover {
+    border-color: var(--accent-cyan);
+    background: var(--bg-card-hover);
     transform: translateY(-2px);
-    box-shadow: 0 12px 36px rgba(124,111,255,.65);
   }
 
-  /* footer */
-  .card-footer-row {
-    text-align: center; font-size: .83rem; color: rgba(255,255,255,.35);
-    margin-bottom: .9rem;
-  }
-  .card-footer-row a {
-    color: #a78bfa; font-weight: 700; text-decoration: none; margin-left: 4px;
-  }
-  .sec-row {
-    display: flex; align-items: center; justify-content: center;
-    gap: 12px; flex-wrap: wrap;
-  }
-  .sec-item {
-    font-size: .65rem; color: rgba(255,255,255,.25);
-    display: flex; align-items: center; gap: 4px;
-  }
-  .sec-item i { color: rgba(124,111,255,.4); }
-
-  /* tab switcher */
-  .tab-switch {
-    display: flex; background: rgba(255,255,255,.04);
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 12px; padding: 4px; margin-bottom: 1.4rem; gap: 4px;
-  }
-  .tab-btn {
-    flex: 1; height: 36px; border: none; border-radius: 9px;
-    font-size: .82rem; font-weight: 700; cursor: pointer;
-    background: transparent; color: rgba(255,255,255,.35);
-    display: flex; align-items: center; justify-content: center; gap: 6px;
-    transition: all .22s;
-  }
-  .tab-btn.active {
-    background: rgba(124,111,255,.18);
-    color: #fff;
-    box-shadow: 0 2px 12px rgba(124,111,255,.2);
-  }
-  .tab-btn.admin-tab.active {
-    background: rgba(239,68,68,.18);
-    box-shadow: 0 2px 12px rgba(239,68,68,.2);
+  /* Fold 3 - Sign In Section */
+  .landing-auth-section {
+    padding: 5rem 1.5rem 6rem;
+    position: relative;
   }
 
-  /* admin toggle button */
-  .admin-toggle-btn {
-    width: 100%; height: 46px; border-radius: 13px;
-    font-size: .88rem; font-weight: 700;
-    background: transparent;
-    border: 1.5px solid rgba(239,68,68,.4);
-    color: #ef4444;
-    cursor: pointer; transition: all .22s;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    margin-bottom: 1.2rem;
+  .admin-switch-btn {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #F59E0B;
+    border-radius: 12px;
+    padding: 0.55rem 1rem;
+    font-size: 0.825rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%;
   }
-  .admin-toggle-btn:hover {
-    background: rgba(239,68,68,.08);
-    border-color: rgba(239,68,68,.7);
+  .admin-switch-btn:hover {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: #F59E0B;
+    color: #F59E0B;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
     transform: translateY(-1px);
   }
-  .admin-mode .admin-toggle-btn {
-    border-color: rgba(124,111,255,.4);
-    color: #a78bfa;
+
+  .user-switch-btn {
+    background: rgba(0, 229, 255, 0.1);
+    border: 1px solid var(--border-card);
+    color: var(--accent-cyan);
+    border-radius: 12px;
+    padding: 0.55rem 1rem;
+    font-size: 0.825rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%;
   }
-  .admin-mode .admin-toggle-btn:hover {
-    background: rgba(124,111,255,.08);
-    border-color: rgba(124,111,255,.7);
+  [data-theme="light"] .user-switch-btn {
+    background: var(--bg-card-subtle);
+    color: var(--accent-blue);
+    border-color: var(--border-subtle);
+  }
+  .user-switch-btn:hover {
+    background: rgba(0, 229, 255, 0.18);
+    transform: translateY(-1px);
   }
 
-  /* admin mode overrides */
-  .admin-mode .card-line  { background: linear-gradient(90deg,#ef4444,#dc2626,#7c6fff); }
-  .admin-mode .card-logo  { background: linear-gradient(135deg,#ef4444,#dc2626 55%,#7c6fff); box-shadow: 0 8px 32px rgba(239,68,68,.45); }
-  .admin-mode .f-wrap:focus-within { border-color: rgba(239,68,68,.55); box-shadow: 0 0 0 3px rgba(239,68,68,.1); background: rgba(239,68,68,.04); }
-  .admin-mode .f-icon { color: rgba(239,68,68,.7); }
-  .admin-mode .eye-tog { color: rgba(239,68,68,.5); }
-  .admin-mode .signin-btn { background: linear-gradient(135deg,#ef4444,#dc2626 60%,#7c6fff); box-shadow: 0 6px 28px rgba(239,68,68,.4); }
-  .admin-mode .signin-btn:hover { box-shadow: 0 12px 36px rgba(239,68,68,.6); }
-  .admin-mode .login-card { border-color: rgba(239,68,68,.22); }
-  .admin-mode .admin-badge { display: flex !important; }
-
-  /* admin badge (hidden by default) */
-  .admin-badge {
-    display: none;
-    align-items: center; justify-content: center; gap: 8px;
-    background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2);
-    border-radius: 10px; padding: .4rem 1rem; margin-bottom: 1rem;
-    font-size: .72rem; font-weight: 700; letter-spacing: .8px;
-    text-transform: uppercase; color: #ef4444;
+  @media (max-width: 991.98px) {
+    .hero-main-title { font-size: 2.3rem; }
+    .hero-subtitle { font-size: 1rem; }
+    .hero-shield-img { height: 110px; }
   }
-  @keyframes glowPulse { 0%,100%{opacity:.7;transform:scale(1);} 50%{opacity:1;transform:scale(1.08);} }
-  @keyframes ringCW   { to { transform: rotate(360deg); } }
-  @keyframes ringCCW  { to { transform: rotate(-360deg); } }
-  @keyframes logoPulse { 0%,100%{box-shadow:0 8px 32px rgba(124,111,255,.5);} 50%{box-shadow:0 8px 48px rgba(124,111,255,.85);} }
-  @keyframes barShimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
-
-  @media(max-width:860px) { .lp-left { display: none; } .lp-right { width: 100%; } }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="login-outer">
-  <canvas id="bgCanvas"></canvas>
+<div class="landing-page-wrap">
 
-  <!-- ══ LEFT: Shield panel ══ -->
-  <div class="lp-left">
-    <div class="shield-scene">
-      <div class="s-ring sr1"></div>
-      <div class="s-ring sr2"></div>
-      <div class="shield-svg-wrap">
-        <svg viewBox="0 0 120 120" width="160" height="160" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#7c6fff"/>
-              <stop offset="55%" stop-color="#a855f7"/>
-              <stop offset="100%" stop-color="#06b6d4"/>
-            </linearGradient>
-            <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-          </defs>
-          <!-- outer shield fill -->
-          <path d="M60 6 L12 26 L12 62 C12 86 34 106 60 114 C86 106 108 86 108 62 L108 26 Z"
-                fill="url(#sg)" opacity=".15"/>
-          <!-- outer shield stroke -->
-          <path d="M60 6 L12 26 L12 62 C12 86 34 106 60 114 C86 106 108 86 108 62 L108 26 Z"
-                fill="none" stroke="url(#sg)" stroke-width="2.5" filter="url(#glow)"/>
-          <!-- inner shield -->
-          <path d="M60 22 L26 36 L26 62 C26 78 40 94 60 100 C80 94 94 78 94 62 L94 36 Z"
-                fill="url(#sg)" opacity=".08"/>
-          <!-- checkmark -->
-          <polyline points="40,60 53,74 80,46"
-                    fill="none" stroke="url(#sg)" stroke-width="6"
-                    stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
-          <!-- center dot -->
-          <circle cx="60" cy="60" r="4" fill="#fff" opacity=".9"/>
-        </svg>
-      </div>
-    </div>
+  <!-- ══ ULTRA-PREMIUM NAVIGATION BAR WITH MEGAMENU ══ -->
+  <nav class="navbar navbar-expand-lg landing-nav">
+    <div class="container-fluid px-xl-5 px-lg-4 px-3">
 
-    <div class="lp-title">Protect Yourself<br/>from <span>Phishing Attacks</span></div>
-    <p class="lp-sub">AI-powered analysis of 15+ URL signals to keep you safe online. Instant results, zero compromise.</p>
+      <!-- Official Shield Logo Brand -->
+      <a class="navbar-brand d-inline-flex align-items-center gap-2 text-nowrap flex-shrink-0" href="{{ url_for('auth.login') }}">
+        <img src="{{ url_for('static', filename='images/logo_icon.png') }}"
+             alt="Phishgaurd AI Logo"
+             style="height: 40px; width: auto; filter: drop-shadow(0 0 12px rgba(0, 229, 255, 0.65));"/>
+        <span class="brand-name" style="font-size: 1.3rem;">Phishgaurd <span class="brand-ai">AI</span></span>
+        <span class="badge d-none d-lg-inline-block text-nowrap" style="background: rgba(0, 229, 255, 0.12); color: var(--accent-cyan); border: 1px solid var(--border-card); font-size: 0.68rem; font-weight: 700; padding: 0.25em 0.6em; border-radius: 99px;">
+          v2.4 Enterprise
+        </span>
+      </a>
 
-    <div class="feat-pills">
-      <span class="fpill" style="color:#10b981;border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.08);"><i class="bi bi-shield-fill-check"></i>SSL Verified</span>
-      <span class="fpill" style="color:#a855f7;border-color:rgba(168,85,247,.35);background:rgba(168,85,247,.08);"><i class="bi bi-cpu-fill"></i>AI Powered</span>
-      <span class="fpill" style="color:#06b6d4;border-color:rgba(6,182,212,.35);background:rgba(6,182,212,.08);"><i class="bi bi-lightning-fill"></i>Instant Scan</span>
-      <span class="fpill" style="color:#f59e0b;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.08);"><i class="bi bi-graph-up-arrow"></i>15+ Signals</span>
-      <span class="fpill" style="color:#ef4444;border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.08);"><i class="bi bi-file-earmark-pdf-fill"></i>PDF Report</span>
-    </div>
-  </div>
+      <!-- Mobile Navbar Toggle -->
+      <button class="navbar-toggler border-0 shadow-none" type="button"
+              data-bs-toggle="collapse" data-bs-target="#landingNavMenu"
+              aria-controls="landingNavMenu" aria-expanded="false" aria-label="Toggle navigation">
+        <i class="bi bi-list fs-2" style="color: var(--text-primary);"></i>
+      </button>
 
-  <!-- ══ RIGHT: Login card ══ -->
-  <div class="lp-right">
-    <div class="login-card">
-      <div class="card-line"></div>
-      <div class="card-body-inner">
+      <!-- Nav Links with MegaMenu, About, and Help -->
+      <div class="collapse navbar-collapse" id="landingNavMenu">
+        <ul class="navbar-nav me-auto ms-lg-4 gap-lg-2 gap-1 align-items-lg-center">
 
-        <div class="admin-badge">
-          <i class="bi bi-shield-lock-fill"></i> Restricted — Admin Access Only
-        </div>
-
-        <!-- Logo -->
-        <div class="card-logo">
-          <svg viewBox="0 0 24 24" width="30" height="30" fill="white">
-            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5L12 1zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93C9.33 17.79 7 14.5 7 11V7.18L12 5z"/>
-            <circle cx="12" cy="12" r="2.2" fill="rgba(255,255,255,.88)"/>
-          </svg>
-        </div>
-
-        <div class="card-title">Welcome back</div>
-        <div class="card-sub">Sign in to <span>PhishGuard AI</span></div>
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% for cat, msg in messages %}
-            <div class="alert alert-{{ cat }} d-flex align-items-center gap-2 py-2 mb-3" style="font-size:.8rem;border-radius:10px;">
-              <i class="bi {% if cat=='danger' %}bi-x-circle-fill{% elif cat=='success' %}bi-check-circle-fill{% else %}bi-info-circle-fill{% endif %}"></i>{{ msg }}
-            </div>
-          {% endfor %}
-        {% endwith %}
-
-        <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-
-          <label class="f-label">Email address</label>
-          <div class="f-wrap">
-            <span class="f-icon"><i class="bi bi-envelope-fill"></i></span>
-            <input type="email" name="email" placeholder="you@example.com" autocomplete="email" required/>
-          </div>
-
-          <label class="f-label">Password</label>
-          <div class="f-wrap">
-            <span class="f-icon"><i class="bi bi-lock-fill"></i></span>
-            <input type="password" name="password" id="loginPwd" placeholder="Enter your password" autocomplete="current-password" required/>
-            <button type="button" class="eye-tog" onclick="toggleLoginEye()">
-              <i class="bi bi-eye" id="eyeIcon"></i>
-            </button>
-          </div>
-
-          <div class="row-rf">
-            <div class="form-check">
-              <input type="checkbox" class="form-check-input" name="remember" id="remember"/>
-              <label class="form-check-label" for="remember">Remember me</label>
-            </div>
-            <a href="{{ url_for('auth.forgot_password') }}" class="forgot-lnk">
-              <i class="bi bi-question-circle"></i>Forgot password?
+          <!-- MegaMenu: Features & AI Signals -->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle text-nowrap" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-grid-fill me-1" style="color: var(--accent-cyan);"></i>Features & AI
             </a>
-          </div>
+            <div class="dropdown-menu megamenu-dropdown">
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <a href="#spotlightSection" class="megamenu-item">
+                    <div class="megamenu-icon-box">
+                      <i class="bi bi-cpu-fill"></i>
+                    </div>
+                    <div>
+                      <div class="megamenu-title">15-Signal URL Extractor</div>
+                      <div class="megamenu-desc">Syntactic tokens, dot density, special characters, and DOM analysis.</div>
+                    </div>
+                  </a>
+                </div>
+                <div class="col-md-6">
+                  <a href="#spotlightSection" class="megamenu-item">
+                    <div class="megamenu-icon-box">
+                      <i class="bi bi-diagram-3-fill"></i>
+                    </div>
+                    <div>
+                      <div class="megamenu-title">Random Forest Classifier</div>
+                      <div class="megamenu-desc">High-precision ML model categorizing Safe, Suspicious, or Phishing.</div>
+                    </div>
+                  </a>
+                </div>
+                <div class="col-md-6">
+                  <a href="#spotlightSection" class="megamenu-item">
+                    <div class="megamenu-icon-box">
+                      <i class="bi bi-patch-check-fill"></i>
+                    </div>
+                    <div>
+                      <div class="megamenu-title">SSL & WHOIS Telemetry</div>
+                      <div class="megamenu-desc">Validates certificate integrity and domain creation timestamps.</div>
+                    </div>
+                  </a>
+                </div>
+                <div class="col-md-6">
+                  <a href="#spotlightSection" class="megamenu-item">
+                    <div class="megamenu-icon-box">
+                      <i class="bi bi-file-earmark-pdf-fill"></i>
+                    </div>
+                    <div>
+                      <div class="megamenu-title">Automated PDF Reports</div>
+                      <div class="megamenu-desc">Instant downloadable forensic security audits with visual risk gauges.</div>
+                    </div>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </li>
 
-          <button type="submit" class="signin-btn">
-            <i class="bi bi-box-arrow-in-right"></i>Sign In
-          </button>
-        </form>
+          <!-- About Button (Modal Trigger) -->
+          <li class="nav-item">
+            <a class="nav-link text-nowrap" href="#" data-bs-toggle="modal" data-bs-target="#aboutModal">
+              <i class="bi bi-info-circle me-1"></i>About
+            </a>
+          </li>
 
-        <a href="{{ url_for('admin.admin_login') }}" class="admin-toggle-btn">
-          <i class="bi bi-shield-lock-fill"></i>Admin Login
-        </a>
+          <!-- Help / FAQ Button (Modal Trigger) -->
+          <li class="nav-item">
+            <a class="nav-link text-nowrap" href="#" data-bs-toggle="modal" data-bs-target="#helpModal">
+              <i class="bi bi-question-circle me-1"></i>Help & FAQ
+            </a>
+          </li>
 
-        <div class="card-footer-row">
-          Don't have an account?
-          <a href="{{ url_for('auth.register') }}">Create one <i class="bi bi-arrow-right" style="font-size:.72rem;"></i></a>
-        </div>
+        </ul>
 
-        <div class="sec-row">
-          <span class="sec-item"><i class="bi bi-shield-lock-fill"></i>256-bit encrypted</span>
-          <span class="sec-item"><i class="bi bi-patch-check-fill"></i>CSRF protected</span>
-          <span class="sec-item"><i class="bi bi-key-fill"></i>Bcrypt hashed</span>
-        </div>
+        <!-- Right Side: Live Feed Badge, Theme Toggle Switch, Sign In, Get Started -->
+        <ul class="navbar-nav ms-auto align-items-center gap-2 gap-xl-3 mt-3 mt-lg-0">
+          <!-- Live Threat Engine Pill Badge -->
+          <li class="nav-item d-none d-lg-block">
+            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill text-nowrap flex-shrink-0"
+                 style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.25); font-size: 0.75rem; font-weight: 700; color: var(--status-safe); white-space: nowrap;">
+              <span class="live-indicator flex-shrink-0"></span>
+              <span class="text-nowrap">ENGINE ONLINE (99.4%)</span>
+            </div>
+          </li>
 
+          <!-- Animated Dark/Light Mode Switch Toggle -->
+          <li class="nav-item flex-shrink-0">
+            <div class="theme-toggle-switch" onclick="PhishGuardTheme.toggleTheme()" role="button" tabindex="0" title="Toggle Dark / Light Theme">
+              <div class="theme-switch-track">
+                <span class="theme-switch-icon theme-icon-dark"><i class="bi bi-moon-stars-fill"></i></span>
+                <span class="theme-switch-icon theme-icon-light"><i class="bi bi-sun-fill"></i></span>
+                <div class="theme-switch-thumb"></div>
+              </div>
+            </div>
+          </li>
+
+          <!-- Sign In Button (Scrolls down to #signInSection) -->
+          <li class="nav-item flex-shrink-0">
+            <a href="#signInSection" class="btn btn-cyber-ghost text-nowrap">
+              <i class="bi bi-box-arrow-in-right me-1"></i>Sign In
+            </a>
+          </li>
+
+          <!-- Get Started Button -->
+          <li class="nav-item flex-shrink-0">
+            <a href="{{ url_for('auth.register') }}" class="btn btn-cyber-primary text-nowrap">
+              <i class="bi bi-rocket-takeoff-fill me-1"></i>Get Started
+            </a>
+          </li>
+        </ul>
       </div>
+
+    </div>
+  </nav>
+
+  <!-- ══ FOLD 1: DETAILS FIRST (HERO OVERVIEW & RADAR CENTERPIECE) ══ -->
+  <section class="landing-hero-fullscreen">
+    <div class="container">
+
+      <!-- Holographic Cyber Shield with Radar & Counter-Rotating Orbit Rings -->
+      <div class="hero-radar-container">
+        <div class="hero-radar-sweep"></div>
+        <div class="cyber-orbit-ring cyber-orbit-outer">
+          <div class="cyber-satellite"></div>
+        </div>
+        <div class="cyber-orbit-ring cyber-orbit-inner"></div>
+        <div class="hero-shield-halo"></div>
+        <img src="{{ url_for('static', filename='images/logo_icon.png') }}"
+             alt="PhishGuard AI Official Emblem"
+             class="hero-shield-img"/>
+      </div>
+
+      <!-- Capability Badge -->
+      <div class="mb-3">
+        <span class="highlight-badge">
+          <i class="bi bi-shield-check"></i>
+          <span>NEXT-GEN AI-POWERED THREAT DETECTION</span>
+        </span>
+      </div>
+
+      <!-- Headline -->
+      <h1 class="hero-main-title mb-3">
+        Protect Yourself from<br/>
+        <span style="background: linear-gradient(135deg, var(--header-grad-1), var(--header-grad-2), var(--header-grad-3)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          Phishing Attacks & Deceptive URLs
+        </span>
+      </h1>
+
+      <!-- Description -->
+      <p class="hero-subtitle">
+        Phishgaurd AI delivers real-time heuristic feature extraction, SSL certificate analysis, and Random Forest classification to keep accounts, endpoints, and credentials safe.
+      </p>
+
+      <!-- 4 Live Performance Metrics -->
+      <div class="d-flex flex-wrap gap-3 justify-content-center mb-4">
+        <div class="hero-stat-pill">
+          <div class="hero-stat-num" style="color: var(--accent-cyan);">15+</div>
+          <div class="hero-stat-label">Heuristic Signals</div>
+        </div>
+        <div class="hero-stat-pill">
+          <div class="hero-stat-num" style="color: var(--status-safe);">99.4%</div>
+          <div class="hero-stat-label">Model Precision</div>
+        </div>
+        <div class="hero-stat-pill">
+          <div class="hero-stat-num" style="color: var(--accent-blue);">&lt;0.2s</div>
+          <div class="hero-stat-label">Analysis Latency</div>
+        </div>
+        <div class="hero-stat-pill">
+          <div class="hero-stat-num" style="color: #F59E0B;">24/7</div>
+          <div class="hero-stat-label">Zero-Trust Shield</div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="d-flex align-items-center justify-content-center gap-3 flex-wrap mb-5">
+        <a href="#signInSection" class="btn btn-cyber-primary px-4 py-2" style="font-size: 1rem;">
+          <i class="bi bi-arrow-down-circle-fill me-1"></i> Sign In to Workspace &darr;
+        </a>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-cyber-ghost px-4 py-2" style="font-size: 1rem;">
+          <i class="bi bi-shield-plus me-1"></i> Create Free Account
+        </a>
+      </div>
+
+      <!-- Animated Scroll Prompt -->
+      <div>
+        <a href="#signInSection" class="scroll-down-prompt">
+          <span>SCROLL DOWN FOR SIGN IN</span>
+          <i class="bi bi-chevron-double-down bounce-arrow"></i>
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══ FOLD 2: LIVE CYBERSECURITY THREAT FEED MARQUEE ══ -->
+  <div class="cyber-live-ticker">
+    <div class="ticker-track">
+      <span class="ticker-item"><span class="ticker-dot phish"></span> [ZERO-DAY MITIGATED] <code>login-apple-id.secure-verify.cc</code> (Risk: 98/100) — Blocked</span>
+      <span class="ticker-item"><span class="ticker-dot safe"></span> [VERIFIED CLEAN] <code>portal.microsoft.com</code> (Risk: 2/100) — Passed</span>
+      <span class="ticker-item"><span class="ticker-dot phish"></span> [HEURISTIC DETECT] <code>secure-bankofamerica.update-id99.com</code> — Neutralized</span>
+      <span class="ticker-item"><span class="ticker-dot warn"></span> [SSL WARNING] <code>paypal-billing-support.xyz</code> (Self-signed cert) — Flagged</span>
+      <span class="ticker-item"><span class="ticker-dot safe"></span> [DOMAIN AUDIT] <code>github.com</code> (10yr WHOIS Age) — Verified</span>
+      <span class="ticker-item"><span class="ticker-dot phish"></span> [CREDENTIAL HARVEST] <code>chase-online-signon.net</code> — Intercepted</span>
+      <!-- Duplicate for seamless loop -->
+      <span class="ticker-item"><span class="ticker-dot phish"></span> [ZERO-DAY MITIGATED] <code>login-apple-id.secure-verify.cc</code> (Risk: 98/100) — Blocked</span>
+      <span class="ticker-item"><span class="ticker-dot safe"></span> [VERIFIED CLEAN] <code>portal.microsoft.com</code> (Risk: 2/100) — Passed</span>
+      <span class="ticker-item"><span class="ticker-dot phish"></span> [HEURISTIC DETECT] <code>secure-bankofamerica.update-id99.com</code> — Neutralized</span>
+      <span class="ticker-item"><span class="ticker-dot warn"></span> [SSL WARNING] <code>paypal-billing-support.xyz</code> (Self-signed cert) — Flagged</span>
     </div>
   </div>
+
+  <!-- ══ FOLD 3: FEATURE SPOTLIGHT & INTELLIGENCE DETAILS ══ -->
+  <section class="landing-spotlight-section" id="spotlightSection">
+    <div class="container">
+      <div class="text-center mb-5">
+        <div class="d-inline-flex align-items-center gap-1 px-3 py-1 rounded-pill mb-2"
+             style="background: rgba(0, 229, 255, 0.1); color: var(--accent-cyan); border: 1px solid var(--border-card); font-size: 0.75rem; font-weight: 700;">
+          <i class="bi bi-layers-fill"></i>
+          <span>ADVANCED ARCHITECTURE</span>
+        </div>
+        <h2 class="fw-bold" style="font-size: 2.2rem; font-family: 'Outfit', sans-serif;">
+          How Phish Gaurd AI Detects Threats
+        </h2>
+        <p class="text-secondary mx-auto" style="max-width: 560px; font-size: 0.95rem;">
+          Multi-layer heuristic inspection and machine learning models process URLs in milliseconds.
+        </p>
+      </div>
+
+      <div class="row g-4">
+        <!-- Feature 1 -->
+        <div class="col-md-4">
+          <div class="spotlight-card tilt-card-3d">
+            <div class="spotlight-icon-box" style="background: rgba(0, 229, 255, 0.12); color: var(--accent-cyan);">
+              <i class="bi bi-search"></i>
+            </div>
+            <h5 class="fw-bold mb-2" style="font-family: 'Outfit', sans-serif;">15-Signal URL Extractor</h5>
+            <p class="text-secondary mb-0" style="font-size: 0.875rem; line-height: 1.6;">
+              Extracts syntactic lexical structure, IP hosting, domain entropy, subdomains, @ symbols, and anchor tags to catch obfuscated links.
+            </p>
+          </div>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="col-md-4">
+          <div class="spotlight-card tilt-card-3d">
+            <div class="spotlight-icon-box" style="background: rgba(37, 99, 235, 0.15); color: var(--accent-blue);">
+              <i class="bi bi-cpu-fill"></i>
+            </div>
+            <h5 class="fw-bold mb-2" style="font-family: 'Outfit', sans-serif;">Random Forest AI Model</h5>
+            <p class="text-secondary mb-0" style="font-size: 0.875rem; line-height: 1.6;">
+              Trained on thousands of real-world legitimate and phishing websites with 200 decision estimators for optimal classification precision.
+            </p>
+          </div>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="col-md-4">
+          <div class="spotlight-card tilt-card-3d">
+            <div class="spotlight-icon-box" style="background: rgba(34, 197, 94, 0.12); color: var(--status-safe);">
+              <i class="bi bi-file-earmark-pdf-fill"></i>
+            </div>
+            <h5 class="fw-bold mb-2" style="font-family: 'Outfit', sans-serif;">Forensic Audit Reports</h5>
+            <p class="text-secondary mb-0" style="font-size: 0.875rem; line-height: 1.6;">
+              Generate downloadable PDF security audits with visual risk gauges, SSL validation checks, and email phishing recommendations.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive 15-Signal Breakdown Matrix -->
+      <div class="mt-5 pt-3">
+        <h6 class="text-center fw-bold mb-3 text-secondary text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.12em;">
+          Deep Inspection Signal Vector
+        </h6>
+        <div class="row g-2">
+          <div class="col-6 col-md-4 col-lg-2">
+            <div class="signal-grid-card">
+              <i class="bi bi-link-45deg text-info fs-5"></i>
+              <div style="font-size: 0.78rem; font-weight: 700;">Lexical Tokens</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-4 col-lg-2">
+            <div class="signal-grid-card">
+              <i class="bi bi-hdd-network text-success fs-5"></i>
+              <div style="font-size: 0.78rem; font-weight: 700;">IP Address Host</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-4 col-lg-2">
+            <div class="signal-grid-card">
+              <i class="bi bi-shield-check text-warning fs-5"></i>
+              <div style="font-size: 0.78rem; font-weight: 700;">SSL Cert Validity</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-4 col-lg-2">
+            <div class="signal-grid-card">
+              <i class="bi bi-calendar3 text-primary fs-5"></i>
+              <div style="font-size: 0.78rem; font-weight: 700;">WHOIS Domain Age</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-4 col-lg-2">
+            <div class="signal-grid-card">
+              <i class="bi bi-arrow-repeat text-danger fs-5"></i>
+              <div style="font-size: 0.78rem; font-weight: 700;">Redirect Chains</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-4 col-lg-2">
+            <div class="signal-grid-card">
+              <i class="bi bi-file-earmark-code text-info fs-5"></i>
+              <div style="font-size: 0.78rem; font-weight: 700;">Anchor Obfuscation</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══ FOLD 4: SIGN IN SECTION (SCROLLED TO FROM HERO) ══ -->
+  <section class="landing-auth-section" id="signInSection">
+    <div class="container">
+      <div class="text-center mb-4">
+        <div class="d-inline-flex align-items-center gap-1 px-3 py-1 rounded-pill mb-2"
+             style="background: rgba(37, 99, 235, 0.12); color: var(--accent-blue); border: 1px solid var(--border-card); font-size: 0.75rem; font-weight: 700;">
+          <i class="bi bi-shield-lock-fill"></i>
+          <span>SECURE AUTHENTICATION</span>
+        </div>
+        <h2 class="fw-bold mb-2" style="font-size: 2.2rem; font-family: 'Outfit', sans-serif;">
+          Sign In to Phishgaurd AI
+        </h2>
+        <p class="text-secondary mx-auto" style="max-width: 480px; font-size: 0.9rem;">
+          Access your threat scanner dashboard, recent inspection logs, and forensic security audits.
+        </p>
+      </div>
+
+      <!-- 3D Flip Card Container -->
+      <div class="auth-flip-viewport" id="loginCardContainer">
+        <div class="auth-flip-card" id="authFlipCard">
+
+          <!-- ── FRONT FACE: USER SIGN IN ── -->
+          <div class="auth-flip-face auth-flip-front">
+            <div class="text-center mb-4">
+              <!-- Top-Centered Emblem -->
+              <div class="d-flex justify-content-center mb-2">
+                <img src="{{ url_for('static', filename='images/logo_icon.png') }}"
+                     alt="PhishGuard AI Logo"
+                     style="height: 68px; width: auto; filter: drop-shadow(0 0 18px rgba(0, 229, 255, 0.7)); display: block; margin: 0 auto;"/>
+              </div>
+              <h3 class="fw-bold mb-1" style="font-size: 1.55rem; font-family: 'Outfit', sans-serif;">User Account Sign In</h3>
+              <p style="font-size: 0.825rem; color: var(--text-secondary);" class="mb-0">Enter your credentials to access workspace</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('auth.login') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+              <!-- Email Input Bar with Click-to-Open Recommendations Dropdown -->
+              <div class="mb-3 input-recommendation-wrapper">
+                <label class="form-label" for="userEmail">Email Address</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="bi bi-envelope"></i>
+                  </span>
+                  <input type="email" name="email" id="userEmail" class="form-control mail-bar-input"
+                         placeholder="name@company.com" required autocomplete="off"/>
+                </div>
+
+                <!-- Interactive Recommendation Dropdown -->
+                <div class="bar-recommendation-dropdown" id="userMailDropdown">
+                  <div class="bar-rec-header">
+                    <span><i class="bi bi-stars text-warning me-1"></i>Mail Recommendations</span>
+                    <span style="font-size: 0.65rem;">Click to Autofill</span>
+                  </div>
+                  {% if hint_emails %}
+                    {% for he in hint_emails[:3] %}
+                      <div class="bar-rec-item" onclick="document.getElementById('userEmail').value='{{ he }}'; document.getElementById('userMailDropdown').classList.remove('show'); document.getElementById('userPassword').focus();">
+                        <span><i class="bi bi-person-check text-info me-2"></i>{{ he }}</span>
+                        <span class="bar-rec-badge" style="background: rgba(0, 229, 255, 0.12); color: var(--accent-cyan);">Registered</span>
+                      </div>
+                    {% endfor %}
+                  {% endif %}
+                  <div class="bar-rec-item" onclick="document.getElementById('userEmail').value='secops@phishguard.ai'; document.getElementById('userMailDropdown').classList.remove('show'); document.getElementById('userPassword').focus();">
+                    <span><i class="bi bi-shield-check text-success me-2"></i>secops@phishguard.ai</span>
+                    <span class="bar-rec-badge" style="background: rgba(34, 197, 94, 0.12); color: var(--status-safe);">Security Ops</span>
+                  </div>
+                  <div class="bar-rec-item" onclick="document.getElementById('userEmail').value='admin@phishguard.ai'; document.getElementById('userMailDropdown').classList.remove('show'); flipToAdmin();">
+                    <span><i class="bi bi-shield-lock-fill text-warning me-2"></i>admin@phishguard.ai</span>
+                    <span class="bar-rec-badge" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B;">Admin Portal</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                  <label class="form-label mb-0" for="userPassword">Password</label>
+                  <a href="{{ url_for('auth.forgot_password') }}" style="font-size: 0.75rem; color: var(--accent-blue); text-decoration: none; font-weight: 600;">
+                    Forgot password?
+                  </a>
+                </div>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="bi bi-lock"></i>
+                  </span>
+                  <input type="password" name="password" id="userPassword" class="form-control"
+                         placeholder="••••••••" required autocomplete="current-password"/>
+                  <button type="button" class="btn-input-group" onclick="togglePass('userPassword', this)" title="Toggle password visibility">
+                    <i class="bi bi-eye-slash"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="remember" id="userRemember"/>
+                  <label class="form-check-label" for="userRemember" style="font-size: 0.8rem; color: var(--text-secondary); cursor: pointer;">
+                    Remember me
+                  </label>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-cyber-primary w-100 py-2 mb-3">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Workspace
+              </button>
+            </form>
+
+            <div class="text-center mb-3" style="font-size: 0.825rem; color: var(--text-secondary);">
+              Don't have an account?
+              <a href="{{ url_for('auth.register') }}" style="color: var(--accent-cyan); font-weight: 700; text-decoration: none;">
+                Create account
+              </a>
+            </div>
+
+            <!-- 3D FLIP BUTTON TO ADMIN PORTAL -->
+            <div class="border-top pt-3 text-center" style="border-color: var(--border-subtle) !important;">
+              <button type="button" class="admin-switch-btn" onclick="flipToAdmin()" title="Switch to Admin Console login">
+                <i class="bi bi-shield-lock-fill"></i>
+                <span>Switch to Admin Portal ↻</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ── BACK FACE: ADMIN LOGIN CARD (REVEALED ON 3D FLIP) ── -->
+          <div class="auth-flip-face auth-flip-back">
+            <div class="text-center mb-4">
+              <!-- Top Centered Emblem -->
+              <div class="d-flex justify-content-center mb-2">
+                <img src="{{ url_for('static', filename='images/logo_icon.png') }}"
+                     alt="PhishGuard AI Admin"
+                     style="height: 68px; width: auto; filter: drop-shadow(0 0 18px rgba(245, 158, 11, 0.7)); display: block; margin: 0 auto;"/>
+              </div>
+
+              <!-- Centered Administrator Console Badge -->
+              <div class="d-inline-flex align-items-center justify-content-center gap-1 px-3 py-1 rounded-pill mb-2"
+                   style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.35); font-size: 0.72rem; font-weight: 700;">
+                <i class="bi bi-shield-lock-fill"></i>
+                <span>ADMINISTRATOR CONSOLE</span>
+              </div>
+
+              <h3 class="fw-bold mb-1" style="font-size: 1.55rem; font-family: 'Outfit', sans-serif;">Admin Access</h3>
+              <p style="font-size: 0.825rem; color: var(--text-secondary);" class="mb-0">Administrative credential authentication</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('admin.admin_login') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+              <!-- Admin Email Bar with Recommendation Popover -->
+              <div class="mb-3 input-recommendation-wrapper">
+                <label class="form-label" for="adminEmailField">Admin Email</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="bi bi-envelope"></i>
+                  </span>
+                  <input type="email" name="email" id="adminEmailField" class="form-control mail-bar-input"
+                         value="admin@phishguard.ai" placeholder="admin@phishguard.ai" required autocomplete="off"/>
+                </div>
+
+                <!-- Admin Recommendation Dropdown -->
+                <div class="bar-recommendation-dropdown" id="adminMailDropdown">
+                  <div class="bar-rec-header">
+                    <span><i class="bi bi-shield-lock text-warning me-1"></i>Official Admin Mail</span>
+                  </div>
+                  <div class="bar-rec-item" onclick="document.getElementById('adminEmailField').value='admin@phishguard.ai'; document.getElementById('adminMailDropdown').classList.remove('show'); document.getElementById('adminPasswordField').focus();">
+                    <span><i class="bi bi-key-fill text-warning me-2"></i>admin@phishguard.ai</span>
+                    <span class="bar-rec-badge" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B;">Master Admin</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label" for="adminPasswordField">Admin Password</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="bi bi-lock"></i>
+                  </span>
+                  <input type="password" name="password" id="adminPasswordField" class="form-control"
+                         placeholder="••••••••" required autocomplete="current-password"/>
+                  <button type="button" class="btn-input-group" onclick="togglePass('adminPasswordField', this)" title="Toggle password visibility">
+                    <i class="bi bi-eye-slash"></i>
+                  </button>
+                </div>
+              </div>
+
+              <button type="submit" class="btn w-100 py-2 mb-3 fw-bold text-white"
+                      style="background: linear-gradient(135deg, #F59E0B, #EF4444); border: none; box-shadow: 0 4px 18px rgba(245, 158, 11, 0.35); border-radius: 12px;">
+                <i class="bi bi-shield-check me-1"></i> Authenticate Admin
+              </button>
+            </form>
+
+            <!-- 3D FLIP BUTTON BACK TO USER LOGIN -->
+            <div class="border-top pt-3 text-center" style="border-color: var(--border-subtle) !important;">
+              <button type="button" class="user-switch-btn" onclick="flipToUser()" title="Return to standard user sign in">
+                <i class="bi bi-arrow-left me-1"></i>
+                <span>Return to User Login ↻</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ PROPER BOTTOM FOOTER ══ -->
+  <footer class="landing-footer">
+    <div class="container d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div class="d-flex align-items-center gap-2">
+        <span class="live-indicator"></span>
+        <img src="{{ url_for('static', filename='images/logo_icon.png') }}" alt="Phish Gaurd AI Logo" style="height: 22px; width: auto;"/>
+        <span style="font-weight: 600; color: var(--text-primary);">Phishgaurd AI</span>
+        <span>&middot;</span>
+        <span>&copy; 2026 Phishgaurd AI. All rights reserved.</span>
+      </div>
+
+      <div class="d-flex align-items-center gap-3" style="font-size: 0.8rem;">
+        <a href="#" data-bs-toggle="modal" data-bs-target="#aboutModal" style="color: var(--text-secondary); text-decoration: none;">About Platform</a>
+        <span>&middot;</span>
+        <a href="#" data-bs-toggle="modal" data-bs-target="#helpModal" style="color: var(--text-secondary); text-decoration: none;">Help & Security FAQ</a>
+        <span>&middot;</span>
+        <a href="#signInSection" style="color: var(--accent-cyan); text-decoration: none;">Sign In</a>
+      </div>
+    </div>
+  </footer>
 
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-function toggleLoginEye() {
-  const el = document.getElementById('loginPwd');
-  const ic = document.getElementById('eyeIcon');
-  el.type = el.type === 'password' ? 'text' : 'password';
-  ic.className = el.type === 'text' ? 'bi bi-eye-slash' : 'bi bi-eye';
+function flipToAdmin() {
+  const card = document.getElementById('authFlipCard');
+  if (card) card.classList.add('is-flipped');
+  sessionStorage.setItem('pg_auth_card_face', 'admin');
+  try {
+    history.replaceState(null, null, '#admin');
+  } catch (e) {}
 }
 
-/* Particle canvas */
-(function () {
-  const canvas = document.getElementById('bgCanvas');
-  const ctx = canvas.getContext('2d');
-  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-  resize(); window.addEventListener('resize', resize);
-  const C = ['rgba(124,111,255,','rgba(168,85,247,','rgba(6,182,212,','rgba(255,255,255,'];
-  const pts = Array.from({ length: 75 }, () => ({
-    x: Math.random() * innerWidth, y: Math.random() * innerHeight,
-    r: Math.random() * 1.8 + .7,
-    col: C[Math.floor(Math.random() * C.length)],
-    a: Math.random() * .35 + .07,
-    dx: (Math.random() - .5) * .32, dy: (Math.random() - .5) * .32,
-    p: Math.random() * Math.PI * 2, ps: Math.random() * .016 + .007,
-  }));
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    pts.forEach(p => {
-      p.p += p.ps;
-      const a = p.a * (.5 + .5 * Math.sin(p.p));
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = p.col + a + ')'; ctx.fill();
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = p.col + (a * .09) + ')'; ctx.fill();
-      p.x += p.dx; p.y += p.dy;
-      if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
-      if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
-    });
-    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
-      const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
-      const d = Math.sqrt(dx * dx + dy * dy);
-      if (d < 115) {
-        ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y);
-        ctx.strokeStyle = 'rgba(124,111,255,' + (.065 * (1 - d / 115)) + ')';
-        ctx.lineWidth = .5; ctx.stroke();
-      }
+function flipToUser() {
+  const card = document.getElementById('authFlipCard');
+  if (card) card.classList.remove('is-flipped');
+  sessionStorage.setItem('pg_auth_card_face', 'user');
+  try {
+    history.replaceState(null, null, window.location.pathname + window.location.search);
+  } catch (e) {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = sessionStorage.getItem('pg_auth_card_face');
+  if (window.location.hash === '#admin' || saved === 'admin' || window.location.search.includes('admin=1')) {
+    const card = document.getElementById('authFlipCard');
+    if (card) {
+      card.classList.add('is-flipped');
     }
-    requestAnimationFrame(draw);
   }
-  draw();
-})();
+});
 </script>
 {% endblock %}

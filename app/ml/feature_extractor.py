@@ -62,7 +62,11 @@ def extract_features(url: str) -> dict:
 
 def _get_domain_age(domain: str) -> int:
     try:
-        w = whois.whois(domain.split(':')[0])
+        host = domain.split(':')[0]
+        if host.endswith('.test') or host.endswith('.local') or host.endswith('.invalid'):
+            return -1
+        socket.setdefaulttimeout(1.5)
+        w = whois.whois(host)
         creation = w.creation_date
         if isinstance(creation, list):
             creation = creation[0]
@@ -75,10 +79,13 @@ def _get_domain_age(domain: str) -> int:
 
 def _check_ssl(domain: str) -> int:
     try:
+        host = domain.split(':')[0]
+        if host.endswith('.test') or host.endswith('.local') or host.endswith('.invalid'):
+            return 0
         ctx = ssl.create_default_context()
-        with ctx.wrap_socket(socket.socket(), server_hostname=domain.split(':')[0]) as s:
-            s.settimeout(5)
-            s.connect((domain.split(':')[0], 443))
+        with ctx.wrap_socket(socket.socket(), server_hostname=host) as s:
+            s.settimeout(1.5)
+            s.connect((host, 443))
         return 1
     except Exception:
         return 0
@@ -92,10 +99,15 @@ def _fetch_page_features(url: str) -> dict:
         'redirect_count': 0,
         'has_suspicious_js': 0,
     }
+    parsed = urlparse(url if url.startswith('http') else 'http://' + url)
+    host = (parsed.netloc or parsed.path).split(':')[0]
+    if host.endswith('.test') or host.endswith('.local') or host.endswith('.invalid'):
+        return defaults
+
     try:
         resp = requests.get(
             url if url.startswith('http') else 'http://' + url,
-            timeout=8, allow_redirects=True,
+            timeout=2.0, allow_redirects=True,
             headers={'User-Agent': 'Mozilla/5.0'}
         )
         defaults['redirect_count'] = len(resp.history)
