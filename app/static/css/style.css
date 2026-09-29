@@ -2600,4 +2600,436 @@ p, span, label, input, button {
   background: var(--bg-main);
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   25. COMPREHENSIVE RESPONSIVE ENGINE — EVERY SCREEN & DEVICE
+   Desktop (>1200px), Laptop (992-1199px), Tablet (768-991px),
+   Phablet/Landscape (576-767px), Mobile (360-575px), Ultra-Compact (<360px)
+══════════════════════════════════════════════════════════════════ */
+
+/* ── Global Fluid Layout & Touch Optimization ── */
+*, *::before, *::after {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.url-truncate {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.825rem;
+}
+
+.table-responsive {
+  -webkit-overflow-scrolling: touch;
+  border-radius: 14px;
+}
+
+/* ── Breakpoint: Large Desktop & Laptops (<= 1199.98px) ── */
+@media (max-width: 1199.98px) {
+  .landing-nav-inner {
+    padding: 0 1rem;
+  }
+  .megamenu-dropdown {
+    width: 580px;
+  }
+}
+
+/* ── Breakpoint: Tablets & Small Laptops (<= 991.98px) ── */
+@media (max-width: 991.98px) {
+  /* Navbar collapse styling */
+  .navbar-collapse {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 18px;
+    padding: 1.1rem;
+    margin-top: 0.85rem;
+    box-shadow: var(--shadow-elevated);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  [data-theme="light"] .navbar-collapse {
+    background: #FFFFFF;
+    border-color: #E2E8F0;
+  }
+  .navbar-nav.me-auto {
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 0.75rem;
+  }
+  .navbar-nav .nav-link {
+    padding: 0.55rem 0.85rem !important;
+    border-radius: 10px;
+  }
+  .navbar-nav.ms-auto {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .navbar-nav.ms-auto .nav-item {
+    flex: 1 1 auto;
+  }
+  .navbar-nav.ms-auto .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Megamenu dropdown full width on tablet */
+  .megamenu-dropdown {
+    position: static !important;
+    width: 100% !important;
+    transform: none !important;
+    box-shadow: none;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+  }
+  
+  /* Landing Hero */
+  .hero-main-title {
+    font-size: clamp(2rem, 5vw, 2.75rem);
+  }
+  .hero-subtitle {
+    font-size: 0.95rem;
+  }
+  .hero-shield-img {
+    height: 100px;
+  }
+  .landing-spotlight-section {
+    padding: 3.5rem 0;
+  }
+  
+  /* Scanner Hero */
+  .scanner-hero-wrap {
+    padding: 0 0.5rem;
+  }
+  
+  /* Verdict Page columns stack */
+  .verdict-hero-card {
+    border-radius: 20px;
+  }
+}
+
+/* ── Breakpoint: Phablets & Mobile Landscape (<= 767.98px) ── */
+@media (max-width: 767.98px) {
+  /* Fluid Content Containers */
+  .pg-content {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    margin-top: 1rem !important;
+  }
+
+  /* Page Headers: Stack Title & Action buttons */
+  .d-flex.align-items-center.justify-content-between.flex-wrap.gap-2.mb-4,
+  .d-flex.align-items-center.justify-content-between.flex-wrap.gap-3.mb-4 {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.85rem !important;
+  }
+  .dash-hero-title {
+    font-size: 1.55rem !important;
+  }
+
+  /* URL Scanner Input Bar: Adaptive Flex Column */
+  .url-bar-container {
+    flex-direction: column !important;
+    border-radius: 18px !important;
+  }
+  .url-prefix-badge {
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-card) !important;
+    padding: 0.6rem 1rem !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
+  }
+  [data-theme="light"] .url-prefix-badge {
+    border-bottom: 1px solid var(--border-subtle) !important;
+  }
+  .url-main-input {
+    height: 48px !important;
+    font-size: 0.9rem !important;
+    padding: 0.5rem 0.9rem !important;
+    width: 100% !important;
+  }
+  .url-submit-btn {
+    height: 48px !important;
+    width: 100% !important;
+    justify-content: center !important;
+    border-radius: 0 0 16px 16px !important;
+    font-size: 0.95rem !important;
+  }
+
+  /* Test Sample Dropdown */
+  .bar-recommendation-dropdown {
+    width: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    border-radius: 14px !important;
+  }
+  .bar-rec-item {
+    padding: 0.65rem 0.75rem !important;
+  }
+  .bar-rec-item span:first-child {
+    max-width: calc(100vw - 160px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+  }
+
+  /* Verdict Hero Banner */
+  .verdict-hero-card {
+    border-radius: 18px !important;
+  }
+  .verdict-hero-inner {
+    flex-direction: column !important;
+    text-align: center !important;
+    gap: 1rem !important;
+  }
+  .verdict-icon-container {
+    margin: 0 auto;
+    width: 64px !important;
+    height: 64px !important;
+    font-size: 1.8rem !important;
+    border-radius: 18px !important;
+  }
+  .score-metrics-grid {
+    grid-template-columns: 1fr !important;
+    gap: 2px !important;
+  }
+  .score-metric-cell {
+    padding: 0.85rem 0.75rem !important;
+  }
+  .score-metric-val {
+    font-size: 1.85rem !important;
+  }
+
+  /* Result Action Buttons (New Scan, Share, Download PDF) */
+  #downloadPdfBtn,
+  #copyShareBtn {
+    font-size: 0.825rem;
+  }
+  .result-header-actions {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+  .result-header-actions .btn {
+    flex: 1 1 auto !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  /* Landing Page Hero Metrics: 2x2 Grid */
+  .d-flex.flex-wrap.gap-3.justify-content-center.mb-4 > .hero-stat-pill {
+    width: calc(50% - 0.75rem) !important;
+    padding: 0.75rem 0.5rem !important;
+  }
+  .hero-stat-num {
+    font-size: 1.45rem !important;
+  }
+  .hero-stat-label {
+    font-size: 0.72rem !important;
+  }
+
+  /* Admin Header Card */
+  .admin-header-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+    padding: 1.25rem 1rem !important;
+  }
+  .admin-header-card .btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Tables: shorten truncate width */
+  .url-truncate {
+    max-width: 180px;
+  }
+}
+
+/* ── Breakpoint: Mobile Portrait (<= 575.98px) ── */
+@media (max-width: 575.98px) {
+  /* General Card & Spacing */
+  .card {
+    border-radius: 18px !important;
+  }
+  .card-header {
+    padding: 0.85rem 1rem !important;
+    font-size: 0.88rem !important;
+  }
+  .card-body {
+    padding: 1rem 0.9rem !important;
+  }
+
+  /* Brand Logo & Name */
+  .brand-logo-img {
+    height: 34px !important;
+  }
+  .brand-name {
+    font-size: 1.15rem !important;
+  }
+
+  /* Header H1 / H2 Scaling */
+  h1, .h1 {
+    font-size: 1.5rem !important;
+  }
+  h2, .h2 {
+    font-size: 1.35rem !important;
+  }
+  h3, .h3 {
+    font-size: 1.2rem !important;
+  }
+
+  /* Metric Stat Cards in Dashboard & Admin: Clean 2x2 Grid */
+  .stat-card-saas {
+    padding: 0.95rem 0.8rem !important;
+    border-radius: 16px !important;
+  }
+  .stat-card-saas .stat-value {
+    font-size: 1.5rem !important;
+  }
+  .stat-card-saas .stat-label {
+    font-size: 0.7rem !important;
+  }
+  .stat-icon-box {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 0.95rem !important;
+    border-radius: 10px !important;
+  }
+
+  /* Scan Table in Dashboard: Compact column sizes */
+  .url-truncate {
+    max-width: 120px !important;
+    font-size: 0.78rem !important;
+  }
+  .scan-table th,
+  .scan-table td {
+    padding: 0.65rem 0.5rem !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* Auth Screens (Login, Register, Reset, Forgot, Logout) */
+  .auth-outer-screen {
+    padding: 1.75rem 0.75rem !important;
+  }
+  .auth-saas-card,
+  .auth-flip-face {
+    padding: 1.5rem 1rem !important;
+    border-radius: 20px !important;
+  }
+  .auth-theme-toggle {
+    top: 0.85rem !important;
+    right: 0.85rem !important;
+  }
+  .hero-shield-img-animated {
+    height: 52px !important;
+  }
+  .hero-radar-box-sm {
+    width: 100px !important;
+    height: 90px !important;
+  }
+  .hero-radar-sweep-sm {
+    width: 95px !important;
+    height: 95px !important;
+  }
+
+  /* Password Rules: 1 column on mobile to prevent squished text */
+  .pwd-rules-grid {
+    grid-template-columns: 1fr !important;
+    gap: 4px !important;
+  }
+
+  /* Feature Badges in Scanner */
+  .feature-chip-badge {
+    font-size: 0.72rem !important;
+    padding: 0.35em 0.65em !important;
+  }
+
+  /* Floating Chatbot Assistant on Mobile */
+  .pg-help-launcher-wrap {
+    bottom: 20px !important;
+    right: 16px !important;
+  }
+  .pg-help-avatar-btn {
+    width: 54px !important;
+    height: 54px !important;
+  }
+  .pg-help-avatar-img {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  .pg-help-bubble-hint {
+    display: none !important;
+  }
+  .pg-help-chat-popup {
+    width: calc(100vw - 24px) !important;
+    right: 12px !important;
+    bottom: 85px !important;
+    height: calc(100dvh - 110px) !important;
+    max-height: 520px !important;
+    border-radius: 20px !important;
+  }
+
+  /* Footer on Mobile */
+  .pg-footer .container {
+    flex-direction: column !important;
+    text-align: center !important;
+    gap: 0.75rem !important;
+    justify-content: center !important;
+  }
+  .pg-footer .container > div {
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+  }
+
+  /* Modals on Mobile */
+  .modal-dialog {
+    margin: 0.5rem !important;
+    max-width: calc(100% - 1rem) !important;
+  }
+  .modal-content {
+    border-radius: 18px !important;
+  }
+  .modal-body {
+    padding: 1rem !important;
+  }
+  .modal-header {
+    padding: 1rem 1rem 0.5rem 1rem !important;
+  }
+}
+
+/* ── Breakpoint: Ultra-Compact Mobile (< 360px - e.g. iPhone SE 1st gen, Galaxy Fold outer) ── */
+@media (max-width: 359.98px) {
+  .brand-name {
+    font-size: 1.05rem !important;
+  }
+  .brand-logo-img {
+    height: 30px !important;
+  }
+  .url-main-input {
+    font-size: 0.82rem !important;
+  }
+  .stat-card-saas .stat-value {
+    font-size: 1.35rem !important;
+  }
+  .url-truncate {
+    max-width: 95px !important;
+  }
+  .result-header-actions {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
 
