@@ -86,19 +86,32 @@ python seed_admin.py
 ```bash
 python run.py
 ```
-Visit: [http://localhost:5000/auth/login](http://localhost:5000/auth/login)
+Visit: [http://localhost:5000](http://localhost:5000)
+
+## Netlify Deployment
+
+1. Connect your repository to [Netlify](https://app.netlify.com).
+2. Netlify will automatically detect `netlify.toml` and configure the Python serverless function in `netlify/functions/app.py`.
+3. Set the following Environment Variables in the Netlify Dashboard (**Site settings > Environment variables**):
+   - `SECRET_KEY` = (A secure random secret)
+   - `DATABASE_URL` = (Your external PostgreSQL connection string, e.g. from Supabase / Neon / ElephantSQL)
+   - `ADMIN_USERNAME` = `admin`
+   - `ADMIN_EMAIL` = `admin@phishguard.ai`
+   - `ADMIN_PASSWORD` = `YourSecurePassword`
+4. Deploy the site!
 
 ## Routes
 
 | Route | Description |
 |-------|-------------|
-| `/auth/register` | User registration |
+| `/` | Instant URL Scanner (public, no login required) |
+| `/scanner/scan` | Submit URL for analysis (public) |
+| `/scanner/result/<id>` | View scan verdict & 15 signals (public) |
+| `/scanner/report/<id>/pdf` | Download forensic PDF report (sign-in required) |
 | `/auth/login` | User login |
-| `/dashboard/` | User analytics dashboard |
-| `/scanner/scan` | Submit URL for analysis |
-| `/scanner/result/<id>` | View scan result |
-| `/scanner/report/<id>/pdf` | Download PDF report |
-| `/admin/` | Admin panel (admin only) |
+| `/auth/register` | User registration |
+| `/dashboard/` | User analytics dashboard (authenticated) |
+| `/admin/` | Admin console (admin only) |
 
 ## ML Model Details
 

@@ -38,7 +38,6 @@ def _vc(pred):
 
 
 @scanner_bp.route('/scan', methods=['GET', 'POST'])
-@login_required
 def scan():
     if request.method == 'POST':
         url = request.form.get('url', '').strip()
@@ -47,8 +46,9 @@ def scan():
             return redirect(url_for('scanner.scan'))
         try:
             result = predict(url)
+            user_id = current_user.id if current_user.is_authenticated else None
             scan_result = ScanResult(
-                user_id    = current_user.id,
+                user_id    = user_id,
                 url        = url,
                 prediction = result['prediction'],
                 confidence = result['confidence'],
@@ -67,22 +67,33 @@ def scan():
 
 
 @scanner_bp.route('/result/<int:scan_id>')
-@login_required
 def result(scan_id):
     scan = ScanResult.query.get_or_404(scan_id)
-    if scan.user_id != current_user.id and not current_user.is_admin:
-        flash('Access denied.', 'danger')
-        return redirect(url_for('dashboard.index'))
+    if scan.user_id is None and current_user.is_authenticated:
+        scan.user_id = current_user.id
+        db.session.commit()
+    if scan.user_id is not None and current_user.is_authenticated:
+        if scan.user_id != current_user.id and not current_user.is_admin:
+            flash('Access denied.', 'danger')
+            return redirect(url_for('scanner.scan'))
     return render_template('scanner/result.html', scan=scan)
 
 
 @scanner_bp.route('/report/<int:scan_id>/pdf')
-@login_required
 def download_report(scan_id):
+    if not current_user.is_authenticated:
+        flash('Please sign in or create a free account to download the forensic PDF report.', 'warning')
+        return redirect(url_for('auth.login', next=url_for('scanner.result', scan_id=scan_id, download=1)))
+
     scan = ScanResult.query.get_or_404(scan_id)
-    if scan.user_id != current_user.id and not current_user.is_admin:
+    # If the scan was created anonymously, associate it with the logged in user now
+    if scan.user_id is None:
+        scan.user_id = current_user.id
+        db.session.commit()
+    elif scan.user_id != current_user.id and not current_user.is_admin:
         flash('Access denied.', 'danger')
-        return redirect(url_for('dashboard.index'))
+        return redirect(url_for('scanner.scan'))
+
     buf = BytesIO()
     _build_pdf(scan, buf)
     buf.seek(0)
@@ -185,11 +196,12 @@ def _build_pdf(scan, dest):
     url_text = scan.url
     if len(url_text) > 70:
         url_text = ' '.join([url_text[i:i+60] for i in range(0, len(url_text), 60)])
+    scanned_by = scan.user.username if scan.user else "Guest / Public Scan"
     info = Table([
         [Paragraph('<font color="#7c6fff"><b>Target URL</b></font>', N),
          Paragraph(f'<font color="#e0e0ff">{url_text}</font>', NW)],
         [Paragraph('<font color="#7c6fff"><b>Scanned By</b></font>', N),
-         Paragraph(f'<font color="#e0e0ff">{scan.user.username}</font>', N)],
+         Paragraph(f'<font color="#e0e0ff">{scanned_by}</font>', N)],
         [Paragraph('<font color="#7c6fff"><b>Timestamp</b></font>', N),
          Paragraph(f'<font color="#e0e0ff">{scan.scanned_at.strftime("%d %B %Y at %H:%M:%S UTC")}</font>', N)],
     ], colWidths=[3.2*cm, TW-3.2*cm])

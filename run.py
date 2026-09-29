@@ -6,10 +6,6 @@ from dotenv import load_dotenv
 load_dotenv()
 app = create_app()
 
-@app.route('/')
-def home():
-    return redirect(url_for('auth.login'))
-
 # Auto-initialize database, ML model, and admin account on cloud startup
 with app.app_context():
     db.create_all()

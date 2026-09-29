@@ -170,6 +170,8 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 body {
@@ -179,6 +181,7 @@ body {
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
+  overflow-y: auto;
   line-height: 1.55;
   transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -249,6 +252,8 @@ p, span, label, input, button {
 .pg-content {
   position: relative;
   z-index: 1;
+  min-height: calc(100vh - 70px);
+  padding-bottom: 2rem;
 }
 
 /* ── 4. NAVBAR & NAVIGATION ── */
@@ -1013,6 +1018,25 @@ p, span, label, input, button {
   font-size: 0.825rem;
   color: var(--text-primary);
   font-family: 'JetBrains Mono', monospace;
+  min-width: 0;
+}
+.bar-rec-item > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+.bar-rec-item > span:first-child i {
+  flex-shrink: 0;
+}
+.bar-rec-badge {
+  flex-shrink: 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.2em 0.55em;
+  border-radius: 6px;
 }
 .bar-rec-item:hover {
   background: var(--bg-card-hover);
@@ -1021,13 +1045,6 @@ p, span, label, input, button {
 }
 [data-theme="light"] .bar-rec-item:hover {
   color: var(--accent-blue);
-}
-.bar-rec-badge {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 0.2em 0.55em;
-  border-radius: 6px;
 }
 
 /* ── 18. 3D FLIP CARD ANIMATION FOR LOGIN / ADMIN LOGIN ── */

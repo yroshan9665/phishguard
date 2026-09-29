@@ -3,6 +3,19 @@
 {% block container_class %}{% endblock %}
 
 {% block extra_head %}
+<script>
+  // When refreshed from /auth/login, redirect directly to URL scan page
+  (function() {
+    try {
+      var nav = window.performance && performance.getEntriesByType && performance.getEntriesByType("navigation");
+      var isReload = (nav && nav.length > 0 && nav[0].type === "reload") ||
+                     (window.performance && performance.navigation && performance.navigation.type === 1);
+      if (isReload) {
+        window.location.replace("{{ url_for('scanner.scan') }}");
+      }
+    } catch(e) {}
+  })();
+</script>
 <style>
   .landing-page-wrap {
     min-height: 100vh;
@@ -20,13 +33,97 @@
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border-bottom: 1px solid var(--navbar-border);
-    padding: 0.85rem 0;
+    padding: 0.65rem 0;
     box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.35);
   }
-  .landing-nav .nav-link,
-  .landing-nav .btn {
+  .landing-nav-inner {
+    max-width: 1380px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 0 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .landing-nav .navbar-brand {
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-right: 1.25rem;
+  }
+  .landing-nav .nav-link {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary) !important;
+    padding: 0.4rem 0.65rem !important;
+    border-radius: 8px;
+    transition: all 0.2s ease;
     white-space: nowrap !important;
-    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .landing-nav .nav-link:hover,
+  .landing-nav .nav-link:focus {
+    color: var(--text-primary) !important;
+    background: rgba(0, 229, 255, 0.08);
+  }
+  .landing-nav .btn-nav-signin {
+    font-size: 0.825rem;
+    font-weight: 600;
+    padding: 0.4rem 0.85rem;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-card);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .landing-nav .btn-nav-signin:hover {
+    background: rgba(0, 229, 255, 0.1);
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+  }
+  .landing-nav .btn-nav-start {
+    font-size: 0.825rem;
+    font-weight: 700;
+    padding: 0.4rem 1rem;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #00E5FF, #2563EB);
+    color: #fff !important;
+    border: none;
+    box-shadow: 0 4px 14px rgba(0, 229, 255, 0.35);
+    transition: all 0.25s ease;
+    white-space: nowrap;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .landing-nav .btn-nav-start:hover {
+    box-shadow: 0 6px 20px rgba(0, 229, 255, 0.6);
+    transform: translateY(-1px);
+    color: #fff !important;
+  }
+  .landing-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.3rem 0.65rem;
+    border-radius: 99px;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.25);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--status-safe);
+    white-space: nowrap;
   }
 
   /* Hero Section (Fold 1 - Details First) */
@@ -247,18 +344,15 @@
 <div class="landing-page-wrap">
 
   <!-- ══ ULTRA-PREMIUM NAVIGATION BAR WITH MEGAMENU ══ -->
-  <nav class="navbar navbar-expand-lg landing-nav">
-    <div class="container-fluid px-xl-5 px-lg-4 px-3">
+  <nav class="navbar navbar-expand-xl landing-nav">
+    <div class="landing-nav-inner">
 
       <!-- Official Shield Logo Brand -->
-      <a class="navbar-brand d-inline-flex align-items-center gap-2 text-nowrap flex-shrink-0" href="{{ url_for('auth.login') }}">
+      <a class="navbar-brand text-nowrap flex-shrink-0" href="{{ url_for('auth.login') }}">
         <img src="{{ url_for('static', filename='images/logo_icon.png') }}"
              alt="Phishgaurd AI Logo"
-             style="height: 40px; width: auto; filter: drop-shadow(0 0 12px rgba(0, 229, 255, 0.65));"/>
-        <span class="brand-name" style="font-size: 1.3rem;">Phishgaurd <span class="brand-ai">AI</span></span>
-        <span class="badge d-none d-lg-inline-block text-nowrap" style="background: rgba(0, 229, 255, 0.12); color: var(--accent-cyan); border: 1px solid var(--border-card); font-size: 0.68rem; font-weight: 700; padding: 0.25em 0.6em; border-radius: 99px;">
-          v2.4 Enterprise
-        </span>
+             style="height: 38px; width: auto; filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.6));"/>
+        <span class="brand-name" style="font-size: 1.25rem;">Phishgaurd <span class="brand-ai">AI</span></span>
       </a>
 
       <!-- Mobile Navbar Toggle -->
@@ -270,7 +364,7 @@
 
       <!-- Nav Links with MegaMenu, About, and Help -->
       <div class="collapse navbar-collapse" id="landingNavMenu">
-        <ul class="navbar-nav me-auto ms-lg-4 gap-lg-2 gap-1 align-items-lg-center">
+        <ul class="navbar-nav me-auto ms-xl-3 gap-1 align-items-xl-center">
 
           <!-- MegaMenu: Features & AI Signals -->
           <li class="nav-item dropdown">
@@ -327,6 +421,13 @@
             </div>
           </li>
 
+          <!-- Scan URL Link -->
+          <li class="nav-item">
+            <a class="nav-link text-nowrap" href="{{ url_for('scanner.scan') }}">
+              <i class="bi bi-shield-check me-1" style="color: var(--accent-cyan);"></i>Scan URL
+            </a>
+          </li>
+
           <!-- About Button (Modal Trigger) -->
           <li class="nav-item">
             <a class="nav-link text-nowrap" href="#" data-bs-toggle="modal" data-bs-target="#aboutModal">
@@ -344,41 +445,34 @@
         </ul>
 
         <!-- Right Side: Live Feed Badge, Theme Toggle Switch, Sign In, Get Started -->
-        <ul class="navbar-nav ms-auto align-items-center gap-2 gap-xl-3 mt-3 mt-lg-0">
-          <!-- Live Threat Engine Pill Badge -->
-          <li class="nav-item d-none d-lg-block">
-            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill text-nowrap flex-shrink-0"
-                 style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.25); font-size: 0.75rem; font-weight: 700; color: var(--status-safe); white-space: nowrap;">
-              <span class="live-indicator flex-shrink-0"></span>
-              <span class="text-nowrap">ENGINE ONLINE (99.4%)</span>
-            </div>
-          </li>
+        <div class="d-flex flex-column flex-xl-row align-items-start align-items-xl-center gap-2 gap-xl-2.5 mt-3 mt-xl-0 ms-xl-auto">
+          <!-- Live Threat Engine Pill Badge (desktop only) -->
+          <div class="landing-status-badge d-none d-xxl-inline-flex flex-shrink-0">
+            <span class="live-indicator"></span>
+            <span>ENGINE ONLINE (99.4%)</span>
+          </div>
 
           <!-- Animated Dark/Light Mode Switch Toggle -->
-          <li class="nav-item flex-shrink-0">
-            <div class="theme-toggle-switch" onclick="PhishGuardTheme.toggleTheme()" role="button" tabindex="0" title="Toggle Dark / Light Theme">
-              <div class="theme-switch-track">
-                <span class="theme-switch-icon theme-icon-dark"><i class="bi bi-moon-stars-fill"></i></span>
-                <span class="theme-switch-icon theme-icon-light"><i class="bi bi-sun-fill"></i></span>
-                <div class="theme-switch-thumb"></div>
-              </div>
+          <div class="theme-toggle-switch flex-shrink-0" onclick="PhishGuardTheme.toggleTheme()" role="button" tabindex="0" title="Toggle Dark / Light Theme">
+            <div class="theme-switch-track">
+              <span class="theme-switch-icon theme-icon-dark"><i class="bi bi-moon-stars-fill"></i></span>
+              <span class="theme-switch-icon theme-icon-light"><i class="bi bi-sun-fill"></i></span>
+              <div class="theme-switch-thumb"></div>
             </div>
-          </li>
+          </div>
 
           <!-- Sign In Button (Scrolls down to #signInSection) -->
-          <li class="nav-item flex-shrink-0">
-            <a href="#signInSection" class="btn btn-cyber-ghost text-nowrap">
-              <i class="bi bi-box-arrow-in-right me-1"></i>Sign In
-            </a>
-          </li>
+          <a href="#signInSection" class="btn-nav-signin flex-shrink-0">
+            <i class="bi bi-box-arrow-in-right"></i>
+            <span>Sign In</span>
+          </a>
 
           <!-- Get Started Button -->
-          <li class="nav-item flex-shrink-0">
-            <a href="{{ url_for('auth.register') }}" class="btn btn-cyber-primary text-nowrap">
-              <i class="bi bi-rocket-takeoff-fill me-1"></i>Get Started
-            </a>
-          </li>
-        </ul>
+          <a href="{{ url_for('scanner.scan') }}" class="btn-nav-start flex-shrink-0">
+            <i class="bi bi-rocket-takeoff-fill"></i>
+            <span>Get Started</span>
+          </a>
+        </div>
       </div>
 
     </div>
@@ -444,11 +538,11 @@
 
       <!-- Action Buttons -->
       <div class="d-flex align-items-center justify-content-center gap-3 flex-wrap mb-5">
-        <a href="#signInSection" class="btn btn-cyber-primary px-4 py-2" style="font-size: 1rem;">
-          <i class="bi bi-arrow-down-circle-fill me-1"></i> Sign In to Workspace &darr;
+        <a href="{{ url_for('scanner.scan') }}" class="btn btn-cyber-primary px-4 py-2" style="font-size: 1rem;">
+          <i class="bi bi-shield-check me-1"></i> Get Started — Scan URL &rarr;
         </a>
-        <a href="{{ url_for('auth.register') }}" class="btn btn-cyber-ghost px-4 py-2" style="font-size: 1rem;">
-          <i class="bi bi-shield-plus me-1"></i> Create Free Account
+        <a href="#signInSection" class="btn btn-cyber-ghost px-4 py-2" style="font-size: 1rem;">
+          <i class="bi bi-arrow-down-circle-fill me-1"></i> Sign In to Workspace &darr;
         </a>
       </div>
 
@@ -622,6 +716,7 @@
 
             <form method="POST" action="{{ url_for('auth.login') }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              <input type="hidden" name="next" value="{{ request.args.get('next', '') }}"/>
 
               <!-- Email Input Bar with Click-to-Open Recommendations Dropdown -->
               <div class="mb-3 input-recommendation-wrapper">
@@ -694,7 +789,7 @@
 
             <div class="text-center mb-3" style="font-size: 0.825rem; color: var(--text-secondary);">
               Don't have an account?
-              <a href="{{ url_for('auth.register') }}" style="color: var(--accent-cyan); font-weight: 700; text-decoration: none;">
+              <a href="{{ url_for('auth.register', next=request.args.get('next', '')) if request.args.get('next') else url_for('auth.register') }}" style="color: var(--accent-cyan); font-weight: 700; text-decoration: none;">
                 Create account
               </a>
             </div>

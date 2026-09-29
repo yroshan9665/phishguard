@@ -8,13 +8,24 @@ BASEDIR = os.path.abspath(os.path.dirname(__file__))
 class Config:
     SECRET_KEY       = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
     _db_url          = os.environ.get('DATABASE_URL', '')
-    SQLALCHEMY_DATABASE_URI = _db_url if _db_url else f'sqlite:///{os.path.join(BASEDIR, "instance", "phishing.db")}'
+
+    # Fix Render's postgres URL format (postgres:// -> postgresql://)
+    if _db_url.startswith('postgres://'):
+        _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+
+    if _db_url:
+        SQLALCHEMY_DATABASE_URI = _db_url
+    else:
+        SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(BASEDIR, "instance", "phishing.db")}'
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    REPORTS_DIR      = os.path.join(BASEDIR, 'reports')
+    REPORTS_DIR      = os.environ.get('REPORTS_DIR', os.path.join(BASEDIR, 'reports'))
     MODEL_PATH       = os.path.join(BASEDIR, 'app', 'ml', 'model.joblib')
     WTF_CSRF_ENABLED = True
 
     @staticmethod
     def init_app(app):
-        # Ensure instance folder exists for SQLite
+        # Ensure required directories exist
         os.makedirs(os.path.join(BASEDIR, 'instance'), exist_ok=True)
+        reports_dir = os.environ.get('REPORTS_DIR', os.path.join(BASEDIR, 'reports'))
+        os.makedirs(reports_dir, exist_ok=True)

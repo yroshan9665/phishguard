@@ -34,4 +34,9 @@ def create_app():
     with app.app_context():
         db.create_all()
 
+    @app.route('/')
+    def index():
+        from flask import redirect, url_for
+        return redirect(url_for('scanner.scan'))
+
     return app

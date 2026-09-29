@@ -26,7 +26,7 @@ class ScanResult(db.Model):
     __tablename__ = 'scan_results'
 
     id          = db.Column(db.Integer, primary_key=True)
-    user_id     = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id     = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     url         = db.Column(db.Text, nullable=False)
     prediction  = db.Column(db.String(20), nullable=False)
     confidence  = db.Column(db.Float, nullable=False)

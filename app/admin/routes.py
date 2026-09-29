@@ -29,7 +29,7 @@ def admin_login():
     if current_user.is_authenticated:
         if current_user.is_admin:
             return redirect(url_for('admin.index'))
-        return redirect(url_for('dashboard.index'))
+    next_url = request.form.get('next') or request.args.get('next', '')
     if request.method == 'POST':
         email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
@@ -39,6 +39,8 @@ def admin_login():
             db.session.add(LoginLog(user_id=user.id, ip_address=request.remote_addr, status='success'))
             db.session.commit()
             flash(f'Welcome, {user.username}. Admin access granted.', 'success')
+            if next_url and next_url.startswith('/') and not next_url.startswith('//'):
+                return redirect(next_url)
             return redirect(url_for('admin.index'))
         # log failed attempt if user exists but wrong role/password
         non_admin = User.query.filter_by(email=email).first()
@@ -46,7 +48,7 @@ def admin_login():
             db.session.add(LoginLog(user_id=non_admin.id, ip_address=request.remote_addr, status='failed'))
             db.session.commit()
         flash('Invalid credentials or not an admin account.', 'danger')
-        return redirect(url_for('admin.admin_login'))
+        return redirect(url_for('admin.admin_login', next=next_url if next_url else None))
     return render_template('admin/login.html')
 
 
@@ -166,7 +168,9 @@ def export_excel():
     for r, s in enumerate(scans, 5):
         row_bg = BG_ROW1 if r % 2 == 0 else BG_ROW2
         has_ip = "Yes" if (s.features or {}).get('has_ip', 0) == 1 else "No"
-        vals = [r-4, s.user.username, s.user.email, s.url, s.prediction,
+        u_name = s.user.username if s.user else "Anonymous / Guest"
+        u_mail = s.user.email if s.user else "—"
+        vals = [r-4, u_name, u_mail, s.url, s.prediction,
                 round(s.confidence, 1), s.risk_score,
                 s.scanned_at.strftime('%Y-%m-%d %H:%M'), has_ip]
         for c, v in enumerate(vals, 1):
@@ -221,6 +225,7 @@ def chart_data():
     dist_dict = {row[0]: row[1] for row in dist}
 
     top_users_q = (db.session.query(ScanResult.user_id, func.count(ScanResult.id).label('cnt'))
+                   .filter(ScanResult.user_id.isnot(None))
                    .group_by(ScanResult.user_id)
                    .order_by(func.count(ScanResult.id).desc())
                    .limit(7).all())

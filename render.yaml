@@ -1,9 +1,9 @@
 services:
   - type: web
-    name: phishguard-ai
-    env: python
+    name: phishguard
+    runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn run:app
+    startCommand: gunicorn run:app --bind 0.0.0.0:$PORT
     envVars:
       - key: SECRET_KEY
         generateValue: true
@@ -12,6 +12,6 @@ services:
       - key: ADMIN_EMAIL
         value: admin@phishguard.ai
       - key: ADMIN_PASSWORD
-        value: Admin@1234
+        generateValue: true
       - key: PYTHON_VERSION
         value: 3.10.12

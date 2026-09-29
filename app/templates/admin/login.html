@@ -119,6 +119,7 @@
 
     <form method="POST" action="{{ url_for('admin.admin_login') }}" class="text-start">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="next" value="{{ request.args.get('next', '') }}"/>
 
       <div class="mb-3 input-recommendation-wrapper">
         <label class="form-label" for="adminEmail">Admin Email</label>

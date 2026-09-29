@@ -21,6 +21,7 @@ def _clean_tokens():
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.index'))
+    next_url = request.form.get('next') or request.args.get('next', '')
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         email    = request.form.get('email', '').strip().lower()
@@ -43,11 +44,16 @@ def register():
             flash('Username or email already registered.', 'danger')
         else:
             hashed = bcrypt.generate_password_hash(password).decode('utf-8')
-            db.session.add(User(username=username, email=email, password=hashed))
+            new_user = User(username=username, email=email, password=hashed)
+            db.session.add(new_user)
             db.session.commit()
+            if next_url and next_url.startswith('/') and not next_url.startswith('//'):
+                login_user(new_user)
+                flash(f'Account created! Welcome, {new_user.username}. Your report is downloading...', 'success')
+                return redirect(next_url)
             flash('Account created! Please sign in.', 'success')
             return redirect(url_for('auth.login'))
-        return redirect(url_for('auth.register'))
+        return redirect(url_for('auth.register', next=next_url if next_url else None))
     return render_template('auth/register.html')
 
 
@@ -55,6 +61,7 @@ def register():
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.index'))
+    next_url = request.form.get('next') or request.args.get('next', '')
     if request.method == 'POST':
         email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
@@ -64,18 +71,20 @@ def login():
             db.session.add(LoginLog(user_id=user.id, ip_address=request.remote_addr, status='success'))
             db.session.commit()
             flash(f'Welcome back, {user.username}!', 'success')
+            if next_url and next_url.startswith('/') and not next_url.startswith('//'):
+                return redirect(next_url)
             return redirect(url_for('dashboard.index'))
         # check if it's an admin trying to use user login
         admin_user = User.query.filter_by(email=email, is_admin=True).first()
         if admin_user and bcrypt.check_password_hash(admin_user.password, password):
             flash('Admin accounts must use the Admin Login portal.', 'warning')
-            return redirect(url_for('admin.admin_login'))
+            return redirect(url_for('admin.admin_login', next=next_url if next_url else None))
         if user or admin_user:
             u = user or admin_user
             db.session.add(LoginLog(user_id=u.id, ip_address=request.remote_addr, status='failed'))
             db.session.commit()
         flash('Invalid email or password.', 'danger')
-        return redirect(url_for('auth.login'))
+        return redirect(url_for('auth.login', next=next_url if next_url else None))
     # Pass non-admin emails for autocomplete suggestions
     hint_emails = [u.email for u in User.query.filter_by(is_admin=False).with_entities(User.email).limit(10).all()]
     return render_template('auth/login.html', hint_emails=hint_emails)
